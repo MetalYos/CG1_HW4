@@ -33,6 +33,16 @@ inline bool MaxDbl(double a, double b)
 	return a >= b;
 }
 
+inline double ClampDbl(double value, double low, double high)
+{
+	if (MinDbl(value, low))
+		return low;
+	if (MinDbl(high, value))
+		return high;
+
+	return value;
+}
+
 inline double ToRadians(double angleInDegrees)
 {
 	return (angleInDegrees / 180.0) * AL_PI;

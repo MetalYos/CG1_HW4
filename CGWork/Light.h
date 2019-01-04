@@ -61,12 +61,18 @@ public:
     double DirX;
     double DirY;
     double DirZ;
+
+	// Spotlight parmeters
+	double OuterConeAngle;
+	double InnerConeAngle;
+	bool SoftSpot;
     
     LightParams():
 	Enabled(false), Type(LIGHT_TYPE_DIRECTIONAL), Space(LIGHT_SPACE_VIEW),
 	Attenuation(LIGHT_ATTENUATION_NONE),
 	ColorR(255), ColorG(255), ColorB(255), PosX(0), PosY(0), PosZ(0),
-	DirX(0), DirY(0), DirZ(0)
+	DirX(0), DirY(0), DirZ(0),
+	OuterConeAngle(45.0), InnerConeAngle(30.0), SoftSpot(true)
     {}
 
 protected:

@@ -44,7 +44,8 @@ void CLightDialog::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_LIGHT_DIR_Z, m_lights[m_currentLightIdx].DirZ);
 
 	//NOTE:Add more dialog controls which are associated with the structure below this line		
-	//...
+	DDX_Text(pDX, IDC_LIGHT_OUT_CONE_ANG, m_lights[m_currentLightIdx].OuterConeAngle);
+	DDX_Text(pDX, IDC_LIGHT_IN_CONE_ANG, m_lights[m_currentLightIdx].InnerConeAngle);
 
 	//the following class members can't be updated directly through DDX
 	//using a helper variable for type-casting to solve the compilation error
@@ -64,6 +65,10 @@ void CLightDialog::DoDataExchange(CDataExchange* pDX)
 	m_RadioAtt = m_lights[m_currentLightIdx].Attenuation;
 	DDX_Radio(pDX, IDC_RADIO_ATT_NONE, m_RadioAtt);
 	m_lights[m_currentLightIdx].Attenuation = (LightAttenuation)m_RadioAtt;
+
+	helper = m_lights[m_currentLightIdx].SoftSpot;
+	DDX_Check(pDX, IDC_CHECK_SOFT_SPOT, helper);
+	m_lights[m_currentLightIdx].SoftSpot = (bool)helper;
 }
 
 

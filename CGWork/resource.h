@@ -40,12 +40,14 @@
 #define IDC_LIGHT_TYPE                  1038
 #define IDC_MATERIAL_AMBIENT            1039
 #define IDC_MATERIAL_AMBIENT_R          1039
+#define IDC_LIGHT_OUT_CONE_ANG          1039
 #define IDC_MATERIAL_DIFFUSE            1040
 #define IDC_WIREFRAME_COLOR_BUTTON      1040
 #define IDC_MATERIAL_AMBIENT_B          1040
 #define IDC_MATERIAL_SHININESS          1041
 #define IDC_NORMAL_COLOR_BUTTON         1041
 #define IDC_MATERIAL_SHININESS_R        1041
+#define IDC_LIGHT_IN_CONE_ANG           1041
 #define IDC_MATERIAL_SPECULAR           1042
 #define IDC_BACKGROUND_COLOR_BUTTON     1042
 #define IDC_DISCO_MODE_CHECK            1043
@@ -72,6 +74,8 @@
 #define IDC_RADIO_ATT_NONE              1061
 #define IDC_RADIO_ATT_LINEAR            1062
 #define IDC_RADIO_ATT_POW2              1063
+#define IDC_CHECK1                      1064
+#define IDC_CHECK_SOFT_SPOT             1064
 #define ID_FILE_LOAD                    32771
 #define ID_VIEW_ORTHOGRAPHIC            32772
 #define ID_VIEW_PERSPECTIVE             32773
@@ -130,7 +134,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        153
 #define _APS_NEXT_COMMAND_VALUE         32839
-#define _APS_NEXT_CONTROL_VALUE         1062
+#define _APS_NEXT_CONTROL_VALUE         1065
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

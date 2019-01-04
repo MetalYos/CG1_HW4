@@ -973,7 +973,31 @@ Vec4 CCGWorkView::CalculateShading(LightParams* lights, Material* material, Vec4
 			R = Vec4::Normalize3(R);
 			Vec4 specularCoeff = material->Ks * pow(max(Vec4::Dot3(R, camDir), 0.0), material->Specular);
 			Vec4 specularSingle = intensity * specularCoeff;
-			// specular += intensity * specularCoeff;
+
+			if (lights[i].Type == LIGHT_TYPE_SPOT)
+			{
+				Vec4 directioToPos = Vec4::Normalize3(pos - lightPos);
+				float theta = Vec4::Dot3(directioToPos, -direction);
+				float outerCutoff = cos(ToRadians(lights[i].OuterConeAngle));
+
+				if (lights[i].SoftSpot)
+				{
+					float innerCutoff = cos(ToRadians(lights[i].InnerConeAngle));
+					float epsilon = innerCutoff - outerCutoff;
+					float intensity = ClampDbl((theta - outerCutoff) / epsilon, 0.0, 1.0);
+
+					diffuseSingle *= intensity;
+					specularSingle *= intensity;
+				}
+				else
+				{
+					if (theta <= outerCutoff)
+					{
+						diffuseSingle = Vec4(0.0);
+						specularSingle = Vec4(0.0);
+					}
+				}
+			}
 
 			if (lights[i].Type != LIGHT_TYPE_DIRECTIONAL)
 			{
