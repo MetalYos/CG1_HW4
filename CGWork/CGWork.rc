@@ -147,6 +147,12 @@ BEGIN
             MENUITEM SEPARATOR
             MENUITEM "Clear",                       ID_BACKGROUND_CLEAR
         END
+        MENUITEM SEPARATOR
+        POPUP "Fog Effect"
+        BEGIN
+            MENUITEM "Enable",                      ID_FOGEFFECT_ENABLE
+            MENUITEM "Options...",                  ID_FOGEFFECT_OPTIONS
+        END
     END
     POPUP "&Help"
     BEGIN
@@ -389,6 +395,27 @@ BEGIN
     EDITTEXT        IDC_EDIT_SIL_THICKNESS,73,12,49,14,ES_AUTOHSCROLL | ES_NUMBER
 END
 
+IDD_DIALOG_FOG DIALOGEX 0, 0, 238, 177
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Fog Effect Options"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,118,156,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,172,156,50,14
+    LTEXT           "Color:",IDC_STATIC,17,17,21,8
+    PUSHBUTTON      "",IDC_BUTTON_FOG_COLOR,44,14,50,14
+    LTEXT           "Minimum Distance:",IDC_STATIC,17,38,63,8
+    EDITTEXT        IDC_EDIT_FOG_MIN_DIST,86,35,40,14,ES_AUTOHSCROLL
+    LTEXT           "Maximum Distance:",IDC_STATIC,17,60,65,8
+    EDITTEXT        IDC_EDIT_FOG_MAX_DIST,86,57,40,14,ES_AUTOHSCROLL
+    LTEXT           "Blending Function:",IDC_STATIC,17,80,61,8
+    CONTROL         "Linear",IDC_RADIO_FOG_LINEAR,"Button",BS_AUTORADIOBUTTON | WS_GROUP,27,95,36,10
+    CONTROL         "Exponential",IDC_RADIO_FOG_EXP,"Button",BS_AUTORADIOBUTTON,66,95,53,10
+    CONTROL         "Exponential Squared",IDC_RADIO_FOG_EXP_SQUARED,"Button",BS_AUTORADIOBUTTON,125,95,83,10
+    LTEXT           "Exponent Factor:",IDC_STATIC,17,117,56,8
+    EDITTEXT        IDC_EDIT_FOG_EXP_FACT,86,114,40,14,ES_AUTOHSCROLL
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -511,6 +538,14 @@ BEGIN
         TOPMARGIN, 7
         BOTTOMMARGIN, 92
     END
+
+    IDD_DIALOG_FOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 231
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 170
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
@@ -582,6 +617,11 @@ BEGIN
 END
 
 IDD_LIGHTS_DLG AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_DIALOG_FOG AFX_DIALOG_LAYOUT
 BEGIN
     0
 END

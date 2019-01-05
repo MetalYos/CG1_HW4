@@ -29,6 +29,7 @@
 #include "CExportDialog.h"
 #include "CDialogSilhouette.h"
 #include "PngWrapper.h"
+#include "Fog.h"
 
 struct DVertex
 {
@@ -125,6 +126,10 @@ private:
 	int imgHeight;
 	PngWrapper imgToSave;
 
+	// Fog
+	FogParams fog;
+	bool isFogEnabled;
+
 	// Quick hack
 	std::vector< std::vector<Edge> > selectedPolys;
 
@@ -187,6 +192,7 @@ protected:
 	bool IsBackFace(const Poly* p, const Mat4& modelTransform, const Mat4& normalTransform, const Mat4& camTransform);
 	bool IsSilhouetteEdge(const PolyEdge* e, const Mat4& modelTransform, const Mat4& normalTransform, const Mat4& camTransform);
 	Vec4 CalculateVertexNormal(const Vertex* v, const Mat4& modelTransform, const Mat4& normalTransform, const Mat4& camTransform);
+	COLORREF GetColorWithFog(const Vec4& posVS, COLORREF objColor);
 	virtual void RenderScene();
 
 
@@ -274,6 +280,9 @@ public:
 	afx_msg void OnButtonInverseN();
 	afx_msg void OnOptionsSilhouetteoptions();
 	afx_msg void OnBackgroundClear();
+	afx_msg void OnFogeffectEnable();
+	afx_msg void OnUpdateFogeffectEnable(CCmdUI *pCmdUI);
+	afx_msg void OnFogeffectOptions();
 };
 
 #ifndef _DEBUG  // debug version in CGWorkView.cpp

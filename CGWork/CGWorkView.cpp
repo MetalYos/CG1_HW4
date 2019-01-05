@@ -25,6 +25,7 @@ static char THIS_FILE[] = __FILE__;
 #include <assert.h>
 #include <algorithm>
 #include "Scene.h"
+#include "CFogFialog.h"
 
 #include "PngWrapper.h"
 // For Status Bar access
@@ -110,6 +111,9 @@ BEGIN_MESSAGE_MAP(CCGWorkView, CView)
 	ON_COMMAND(ID_BUTTON_INVERSE_N, &CCGWorkView::OnButtonInverseN)
 	ON_COMMAND(ID_OPTIONS_SILHOUETTEOPTIONS, &CCGWorkView::OnOptionsSilhouetteoptions)
 	ON_COMMAND(ID_BACKGROUND_CLEAR, &CCGWorkView::OnBackgroundClear)
+	ON_COMMAND(ID_FOGEFFECT_ENABLE, &CCGWorkView::OnFogeffectEnable)
+	ON_UPDATE_COMMAND_UI(ID_FOGEFFECT_ENABLE, &CCGWorkView::OnUpdateFogeffectEnable)
+	ON_COMMAND(ID_FOGEFFECT_OPTIONS, &CCGWorkView::OnFogeffectOptions)
 END_MESSAGE_MAP()
 
 // A patch to fix GLaux disappearance from VS2005 to VS2008
@@ -170,8 +174,8 @@ CCGWorkView::CCGWorkView()
 	silThickness = 3;
 	silColor = AL_YELLO_CREF;
 	normalSign = 1.0;
-
 	saveToFile = false;
+	isFogEnabled = false;
 }
 
 CCGWorkView::~CCGWorkView()
@@ -309,6 +313,9 @@ void CCGWorkView::ScanConvert(CDC* pDc, std::vector<Edge> poly, COLORREF color, 
 		// Calculate color
 		Vec4 c = CalculateShading(m_lights, m, polyCenter, polyNormal, objectColor);
 		color = RGB((int)(c[0] * 255.0), (int)(c[1] * 255.0), (int)(c[2] * 255.0));
+
+		if (isFogEnabled)
+			color = GetColorWithFog(polyCenter, color);
 	}
 
 	// Sort edges according to the ymin value
@@ -396,20 +403,14 @@ void CCGWorkView::ScanConvert(CDC* pDc, std::vector<Edge> poly, COLORREF color, 
 			double z = e.A.Z - (e.A.Z - e.B.Z) * ((double)(e.A.Pixel.y - y) / (double)(e.A.Pixel.y - e.B.Pixel.y));
 			i.z = z;
 
-			if (m_nLightShading == ID_LIGHT_SHADING_GOURAUD)
+			for (int j = 0; j < 3; j++)
 			{
 				// Calculate Color at intersections
-				for (int j = 0; j < 3; j++)
-					i.color[j] = e.A.Color[j] - (e.A.Color[j] - e.B.Color[j]) * ((double)(e.A.Pixel.y - y) / (double)(e.A.Pixel.y - e.B.Pixel.y));
-			}
-			if (m_nLightShading == ID_LIGHT_SHADING_PHONG)
-			{
+				i.color[j] = e.A.Color[j] - (e.A.Color[j] - e.B.Color[j]) * ((double)(e.A.Pixel.y - y) / (double)(e.A.Pixel.y - e.B.Pixel.y));
 				// Calculate Normal at intersections
-				for (int j = 0; j < 3; j++)
-				{
-					i.normal[j] = e.A.NormalVS[j] - (e.A.NormalVS[j] - e.B.NormalVS[j]) * ((double)(e.A.Pixel.y - y) / (double)(e.A.Pixel.y - e.B.Pixel.y));
-					i.pos[j] = e.A.PosVS[j] - (e.A.PosVS[j] - e.B.PosVS[j]) * ((double)(e.A.Pixel.y - y) / (double)(e.A.Pixel.y - e.B.Pixel.y));
-				}
+				i.normal[j] = e.A.NormalVS[j] - (e.A.NormalVS[j] - e.B.NormalVS[j]) * ((double)(e.A.Pixel.y - y) / (double)(e.A.Pixel.y - e.B.Pixel.y));
+				// Calculate Position at intersections
+				i.pos[j] = e.A.PosVS[j] - (e.A.PosVS[j] - e.B.PosVS[j]) * ((double)(e.A.Pixel.y - y) / (double)(e.A.Pixel.y - e.B.Pixel.y));
 			}
 
 			intersections.push_back(i);
@@ -427,9 +428,10 @@ void CCGWorkView::ScanConvert(CDC* pDc, std::vector<Edge> poly, COLORREF color, 
 		{
 			// Draw pixel
 		}
+		// Draw line according to shading and zbuffer
 		for (unsigned int i = 0; i < intersections.size(); i += 2)
 		{
-			// Draw line according to shading and zbuffer
+			// Get intersections x pixel pos
 			int x0 = intersections[i].x;
 			if ((i + 1) >= intersections.size())
 				break;
@@ -462,8 +464,9 @@ void CCGWorkView::ScanConvert(CDC* pDc, std::vector<Edge> poly, COLORREF color, 
 			int x = x0;
 			while (x <= x1)
 			{
-				// Caluclate z Pos at (x, y)
+				// Caluclate zPos and pos at (x, y)
 				double zp = z1 - (z1 - z0) * ((double)(x1 - x) / (double)(x1 - x0));
+				Vec4 pos = v1 - (v1 - v0) * ((double)(x1 - x) / (double)(x1 - x0));
 
 				// Calcualte RGB at (x, y) according to shading
 				if (m_nLightShading == ID_LIGHT_SHADING_GOURAUD)
@@ -474,7 +477,6 @@ void CCGWorkView::ScanConvert(CDC* pDc, std::vector<Edge> poly, COLORREF color, 
 				if (m_nLightShading == ID_LIGHT_SHADING_PHONG)
 				{
 					Vec4 normal = n1 - (n1 - n0) * ((double)(x1 - x) / (double)(x1 - x0));
-					Vec4 pos = v1 - (v1 - v0) * ((double)(x1 - x) / (double)(x1 - x0));
 					// Calculate color
 					Vec4 c = CalculateShading(m_lights, m, pos, normal, objectColor);
 					color = RGB((int)(c[0] * 255.0), (int)(c[1] * 255.0), (int)(c[2] * 255.0));
@@ -483,9 +485,12 @@ void CCGWorkView::ScanConvert(CDC* pDc, std::vector<Edge> poly, COLORREF color, 
 				// Draw and update z buffer
 				int width = saveToFile ? imgWidth : m_WindowWidth;
 				int height = saveToFile ? imgHeight : m_WindowHeight;
-				int index = min(x + width * y, width * height - 1);
+				int index = max(0, min(x + width * y, width * height - 1));
 				if (zp > zBuffer[index])
 				{
+					if (isFogEnabled && (m_nLightShading != ID_LIGHT_SHADING_FLAT))
+						color = GetColorWithFog(pos, color);
+
 					if (!saveToFile)
 						pDc->SetPixel(x, y, color);
 					else
@@ -745,8 +750,8 @@ void CCGWorkView::DrawPolyNormal(CDC * pDC, const Poly * p, const Mat4 & modelTr
 
 void CCGWorkView::DrawBackground(CDC* pDC, CRect r)
 {
-	if (((currentPolySelection != WIREFRAME) || saveToFile) && isBGFileOpen) {
-
+	if (((currentPolySelection != WIREFRAME) || saveToFile) && isBGFileOpen && !isFogEnabled)
+	{
 		CT2A BG(BGFile);
 		PngWrapper pngReadFile(BG);
 		pngReadFile.ReadPng();
@@ -795,6 +800,9 @@ void CCGWorkView::DrawBackground(CDC* pDC, CRect r)
 	}
 	else {
 		COLORREF bGColorRef = m_colorDialog.BackgroundColor;
+		if (isFogEnabled && currentPolySelection != WIREFRAME)
+			bGColorRef = RGB(fog.Color[0], fog.Color[1], fog.Color[2]);
+
 		if (!saveToFile)
 			pDC->FillSolidRect(&r, bGColorRef);
 		else
@@ -977,14 +985,14 @@ Vec4 CCGWorkView::CalculateShading(LightParams* lights, Material* material, Vec4
 			if (lights[i].Type == LIGHT_TYPE_SPOT)
 			{
 				Vec4 directioToPos = Vec4::Normalize3(pos - lightPos);
-				float theta = Vec4::Dot3(directioToPos, -direction);
-				float outerCutoff = cos(ToRadians(lights[i].OuterConeAngle));
+				double theta = Vec4::Dot3(directioToPos, -direction);
+				double outerCutoff = cos(ToRadians(lights[i].OuterConeAngle));
 
 				if (lights[i].SoftSpot)
 				{
-					float innerCutoff = cos(ToRadians(lights[i].InnerConeAngle));
-					float epsilon = innerCutoff - outerCutoff;
-					float intensity = ClampDbl((theta - outerCutoff) / epsilon, 0.0, 1.0);
+					double innerCutoff = cos(ToRadians(lights[i].InnerConeAngle));
+					double epsilon = innerCutoff - outerCutoff;
+					double intensity = ClampDbl((theta - outerCutoff) / epsilon, 0.0, 1.0);
 
 					diffuseSingle *= intensity;
 					specularSingle *= intensity;
@@ -1087,6 +1095,43 @@ Vec4 CCGWorkView::CalculateVertexNormal(const Vertex * v, const Mat4 & modelTran
 	normal[3] = 0.0;
 
 	return normal;
+}
+
+COLORREF CCGWorkView::GetColorWithFog(const Vec4& posVS, COLORREF objColor)
+{
+	double factor = 0.0;
+	double dist = Vec4::Length3(posVS);
+
+	if (fog.BlendingFunction == FOG_BLENDING_LINEAR)
+	{
+		if (dist <= fog.MinFogDistance)
+			factor = 0.0;
+		else if ((dist < fog.MaxFogDistance) && (dist > fog.MinFogDistance))
+		{
+			factor = 1.0 - ((fog.MaxFogDistance - dist) / (fog.MaxFogDistance - fog.MinFogDistance));
+			factor = ClampDbl(factor, 0.0, 1.0);
+		}
+		else
+			factor = 1.0;
+	}
+	else if (fog.BlendingFunction == FOG_BLENDING_EXP)
+	{
+		factor = 1.0 - exp(-fog.Exponent * dist);
+	}
+	else
+	{
+		factor = 1.0 - exp(-pow(fog.Exponent * dist, 2));
+	}
+
+	int objR = GetRValue(objColor);
+	int objG = GetGValue(objColor);
+	int objB = GetBValue(objColor);
+
+	int finalR = (int)(factor * fog.Color[0] + (1.0 - factor) * objR);
+	int finalG = (int)(factor * fog.Color[1] + (1.0 - factor) * objG);
+	int finalB = (int)(factor * fog.Color[2] + (1.0 - factor) * objB);
+
+	return RGB(finalR, finalG, finalB);
 }
 
 BOOL CCGWorkView::OnEraseBkgnd(CDC* pDC) 
@@ -1980,6 +2025,8 @@ void CCGWorkView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		m_nLightShading = ID_LIGHT_SHADING_GOURAUD;
 	if (nChar == 0x33) // 3 key
 		m_nLightShading = ID_LIGHT_SHADING_PHONG;
+	if (nChar == 0x46) // F key
+		isFogEnabled = !isFogEnabled;
 
 	CView::OnKeyDown(nChar, nRepCnt, nFlags);
 	Invalidate();
@@ -2136,4 +2183,32 @@ void CCGWorkView::OnBackgroundClear()
 {
 	isBGFileOpen = false;
 	Invalidate();
+}
+
+
+void CCGWorkView::OnFogeffectEnable()
+{
+	isFogEnabled = !isFogEnabled;
+	Invalidate();
+}
+
+
+void CCGWorkView::OnUpdateFogeffectEnable(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(isFogEnabled);
+}
+
+
+void CCGWorkView::OnFogeffectOptions()
+{
+	CFogFialog dlg;
+	dlg.SetDialogData(fog);
+
+	if (dlg.DoModal() == IDOK)
+	{
+		fog = dlg.GetDialogData();
+	}
+
+	if (isFogEnabled)
+		Invalidate();
 }

@@ -15,6 +15,7 @@
 #define IDD_SENSITIVITY_DLG             145
 #define IDD_SAVE_IMAGE_DLG              148
 #define IDD_DIALOG_SILHOUETTE           150
+#define IDD_DIALOG_FOG                  153
 #define IDC_LIGHT_SPACE                 1010
 #define IDC_RADIO_LIGHT1                1017
 #define IDC_RADIO_LIGHT2                1018
@@ -76,6 +77,13 @@
 #define IDC_RADIO_ATT_POW2              1063
 #define IDC_CHECK1                      1064
 #define IDC_CHECK_SOFT_SPOT             1064
+#define IDC_BUTTON_FOG_COLOR            1065
+#define IDC_EDIT_FOG_MIN_DIST           1066
+#define IDC_EDIT_FOG_MAX_DIST           1067
+#define IDC_RADIO_FOG_LINEAR            1068
+#define IDC_RADIO_FOG_EXP               1069
+#define IDC_RADIO_FOG_EXP_SQUARED       1070
+#define IDC_EDIT_FOG_EXP_FACT           1071
 #define ID_FILE_LOAD                    32771
 #define ID_VIEW_ORTHOGRAPHIC            32772
 #define ID_VIEW_PERSPECTIVE             32773
@@ -127,14 +135,17 @@
 #define ID_LIGHT_SETMATERIAL            32836
 #define ID_OPTIONS_SILHOUETTEOPTIONS    32837
 #define ID_BACKGROUND_CLEAR             32838
+#define ID_RENDERING_FOGEFFECT          32839
+#define ID_FOGEFFECT_ENABLE             32840
+#define ID_FOGEFFECT_OPTIONS            32841
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        153
-#define _APS_NEXT_COMMAND_VALUE         32839
-#define _APS_NEXT_CONTROL_VALUE         1065
+#define _APS_NEXT_RESOURCE_VALUE        155
+#define _APS_NEXT_COMMAND_VALUE         32842
+#define _APS_NEXT_CONTROL_VALUE         1069
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
