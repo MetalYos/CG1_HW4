@@ -21,13 +21,14 @@ public:
 	int GetLastFrameNumber() const;
 
 	void ResetAnimation();
-	bool StepToNextFrame();
+	bool StepToNextFrame(bool linearInterpolation = true);
 	const Frame* GetCurrentFrame() const;
 
 	void ClearAnimation();
 
 private:
 	Frame* GetFrameLinearInterpolation(Frame* before, Frame* after, int frame) const;
+	Frame* GetFrameBezierInterpolation(int frameNum) const;
 
 private:
 	std::vector<Frame*> keyFrames;

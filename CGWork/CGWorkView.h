@@ -302,6 +302,10 @@ public:
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnAnimationPlay();
 	afx_msg void OnAnimationSavetoimages();
+	afx_msg void OnInterpolationLinear();
+	afx_msg void OnUpdateInterpolationLinear(CCmdUI *pCmdUI);
+	afx_msg void OnInterpolationBezier();
+	afx_msg void OnUpdateInterpolationBezier(CCmdUI *pCmdUI);
 };
 
 #ifndef _DEBUG  // debug version in CGWorkView.cpp

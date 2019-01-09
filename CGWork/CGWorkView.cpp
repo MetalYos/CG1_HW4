@@ -120,6 +120,10 @@ BEGIN_MESSAGE_MAP(CCGWorkView, CView)
 	ON_WM_LBUTTONUP()
 	ON_COMMAND(ID_ANIMATION_PLAY, &CCGWorkView::OnAnimationPlay)
 	ON_COMMAND(ID_ANIMATION_SAVETOIMAGES, &CCGWorkView::OnAnimationSavetoimages)
+	ON_COMMAND(ID_INTERPOLATION_LINEAR, &CCGWorkView::OnInterpolationLinear)
+	ON_UPDATE_COMMAND_UI(ID_INTERPOLATION_LINEAR, &CCGWorkView::OnUpdateInterpolationLinear)
+	ON_COMMAND(ID_INTERPOLATION_BEZIER, &CCGWorkView::OnInterpolationBezier)
+	ON_UPDATE_COMMAND_UI(ID_INTERPOLATION_BEZIER, &CCGWorkView::OnUpdateInterpolationBezier)
 END_MESSAGE_MAP()
 
 // A patch to fix GLaux disappearance from VS2005 to VS2008
@@ -1758,7 +1762,7 @@ void CCGWorkView::OnTimer(UINT_PTR nIDEvent)
 
 		// Render current frame and step to the next one
 		Invalidate();
-		isPlaying = anim.StepToNextFrame();
+		isPlaying = anim.StepToNextFrame(isLinearInterpolation);
 		
 		// If finished playing the animation, reset it
 		// And if it was rendererd to files, reset that as well
@@ -2372,4 +2376,28 @@ void CCGWorkView::OnAnimationSavetoimages()
 		isPlaying = true;
 		saveToFile = true;
 	}
+}
+
+
+void CCGWorkView::OnInterpolationLinear()
+{
+	isLinearInterpolation = true;
+}
+
+
+void CCGWorkView::OnUpdateInterpolationLinear(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(isLinearInterpolation);
+}
+
+
+void CCGWorkView::OnInterpolationBezier()
+{
+	isLinearInterpolation = false;
+}
+
+
+void CCGWorkView::OnUpdateInterpolationBezier(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(!isLinearInterpolation);
 }
