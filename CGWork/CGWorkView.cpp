@@ -26,6 +26,7 @@ static char THIS_FILE[] = __FILE__;
 #include <algorithm>
 #include "Scene.h"
 #include "CFogFialog.h"
+#include <sstream> // TEMP
 
 #include "PngWrapper.h"
 // For Status Bar access
@@ -114,6 +115,11 @@ BEGIN_MESSAGE_MAP(CCGWorkView, CView)
 	ON_COMMAND(ID_FOGEFFECT_ENABLE, &CCGWorkView::OnFogeffectEnable)
 	ON_UPDATE_COMMAND_UI(ID_FOGEFFECT_ENABLE, &CCGWorkView::OnUpdateFogeffectEnable)
 	ON_COMMAND(ID_FOGEFFECT_OPTIONS, &CCGWorkView::OnFogeffectOptions)
+	ON_COMMAND(ID_ANIMATION_RECORD, &CCGWorkView::OnAnimationRecord)
+	ON_UPDATE_COMMAND_UI(ID_ANIMATION_RECORD, &CCGWorkView::OnUpdateAnimationRecord)
+	ON_WM_LBUTTONUP()
+	ON_COMMAND(ID_ANIMATION_PLAY, &CCGWorkView::OnAnimationPlay)
+	ON_COMMAND(ID_ANIMATION_SAVETOIMAGES, &CCGWorkView::OnAnimationSavetoimages)
 END_MESSAGE_MAP()
 
 // A patch to fix GLaux disappearance from VS2005 to VS2008
@@ -176,6 +182,12 @@ CCGWorkView::CCGWorkView()
 	normalSign = 1.0;
 	saveToFile = false;
 	isFogEnabled = false;
+	
+	// Animation parameters
+	isRecording = false;
+	isPlaying = false;
+	isLinearInterpolation = true;
+	framesPerSeconds = 30;
 }
 
 CCGWorkView::~CCGWorkView()
@@ -864,7 +876,7 @@ BOOL CCGWorkView::InitializeCGWork()
 	GetClientRect(&r);
 	m_pDbDC = new CDC();
 	m_pDbDC->CreateCompatibleDC(m_pDC);
-	SetTimer(1, 1, NULL);
+	SetTimer(1, (int)((1.0 / framesPerSeconds) * 1000), NULL);
 	m_pDbBitMap = CreateCompatibleBitmap(m_pDC->m_hDC, r.right, r.bottom);	
 	m_pDbDC->SelectObject(m_pDbBitMap);
 
@@ -1134,6 +1146,18 @@ COLORREF CCGWorkView::GetColorWithFog(const Vec4& posVS, COLORREF objColor)
 	return RGB(finalR, finalG, finalB);
 }
 
+void CCGWorkView::WriteToStatusBar(const CString & str)
+{
+	CStatusBar* p =
+		(CStatusBar*)AfxGetApp()->m_pMainWnd->GetDescendantWindow(AFX_IDW_STATUS_BAR);
+	p->SetPaneText(0, str);
+}
+
+COLORREF CCGWorkView::Vec4ToColor(const Vec4 & c) const
+{
+	return RGB((int)c[0], (int)c[1], (int)c[2]);
+}
+
 BOOL CCGWorkView::OnEraseBkgnd(CDC* pDC) 
 {
 	// Windows will clear the window with the background color every time your window 
@@ -1165,6 +1189,7 @@ void CCGWorkView::OnDraw(CDC* pDC)
 
 	GetClientRect(&r);
 	CDC *pDCToUse = /*m_pDC*/m_pDbDC;
+
 
 	if (isFirstDraw)
 	{
@@ -1230,10 +1255,19 @@ void CCGWorkView::OnDraw(CDC* pDC)
 		{
 			Mat4 transform = model->GetTransform();
 			Mat4 normalTransform = model->GetNormalTransform();
-			COLORREF color = isCColorDialogOpen ? m_colorDialog.WireframeColor :
-				RGB(model->GetColor()[0], model->GetColor()[1], model->GetColor()[2]);
+			COLORREF color = isCColorDialogOpen ? m_colorDialog.WireframeColor : 
+				Vec4ToColor(model->GetColor());
 			COLORREF normalColor = isCColorDialogOpen ? m_colorDialog.NormalColor :
-				RGB(model->GetNormalColor()[0], model->GetNormalColor()[1], model->GetNormalColor()[2]);
+				Vec4ToColor(model->GetNormalColor());
+
+			// Replace Model and Cam transform matricies if we are playing an animation
+			if (isPlaying)
+			{
+				const Frame* currentFrame = anim.GetCurrentFrame();;
+				transform = currentFrame->ModelTransform;
+				camTransform = currentFrame->CamTransform;
+			}
+
 			for (Geometry* geo : model->GetGeometries())
 			{
 				color = (!showGeos) ? color :
@@ -1375,8 +1409,12 @@ void CCGWorkView::OnDraw(CDC* pDC)
 		if (saveToFile)
 		{
 			imgToSave.WritePng();
-			AfxMessageBox(L"Rendered to file successfully", MB_OK | MB_ICONINFORMATION);
-			saveToFile = false;
+	
+			if (!isPlaying)
+			{
+				AfxMessageBox(L"Rendered to file successfully", MB_OK | MB_ICONINFORMATION);
+				saveToFile = false;
+			}
 
 			// Restore original projection
 			if (m_bIsPerspective)
@@ -1492,6 +1530,9 @@ void CCGWorkView::OnFileLoad()
 		material->Kd = m_materialDialog.GetDiffuseCoeffs();
 		material->Ks = m_materialDialog.GetShininessCoeffs();
 		material->Specular = m_materialDialog.GetSpecularCoeff();
+
+		// Clear Animation
+		anim.ClearAnimation();
 
 		isModelLoaded = true;
 		Invalidate();	// force a WM_PAINT for drawing.
@@ -1698,6 +1739,39 @@ void CCGWorkView::OnTimer(UINT_PTR nIDEvent)
 	CView::OnTimer(nIDEvent);
 	if (nIDEvent == 1 && m_colorDialog.IsDiscoMode)
 		Invalidate();
+
+	if (isPlaying)
+	{
+		// Set png filename if needed
+		if (saveToFile)
+		{
+			std::stringstream ss;
+			ss << anim.GetCurrentFrame()->FrameNumber;
+			std::string temp = animFileName + ss.str() + ".png";
+			imgToSave.SetFileName(temp.c_str());
+
+			if (!imgToSave.InitWritePng())
+			{
+				return;
+			}
+		}
+
+		// Render current frame and step to the next one
+		Invalidate();
+		isPlaying = anim.StepToNextFrame();
+		
+		// If finished playing the animation, reset it
+		// And if it was rendererd to files, reset that as well
+		if (!isPlaying)
+		{
+			anim.ResetAnimation();
+			if (saveToFile)
+			{
+				AfxMessageBox(L"Rendered animation successfully", MB_OK | MB_ICONINFORMATION);
+				saveToFile = false;
+			}
+		}
+	}
 }
 
 void CCGWorkView::OnLButtonDown(UINT nFlags, CPoint point)
@@ -1710,6 +1784,9 @@ void CCGWorkView::OnLButtonDown(UINT nFlags, CPoint point)
 		mouseClickPos = point;
 		selectedPolys.clear();
 	}
+
+	if (isRecording)
+		m_MouseDownTicks = clock();
 
 	CView::OnLButtonDown(nFlags, point);
 
@@ -1786,6 +1863,28 @@ void CCGWorkView::OnMouseMove(UINT nFlags, CPoint point)
 	prevMousePos = point;
 
 	CView::OnMouseMove(nFlags, point);
+}
+
+void CCGWorkView::OnLButtonUp(UINT nFlags, CPoint point)
+{
+	if (isRecording)
+	{
+		clock_t ticksDiff = clock() - m_MouseDownTicks;
+		double timeDiff = (double)ticksDiff / CLOCKS_PER_SEC;
+
+		Mat4 modelTransform = Scene::GetInstance().GetModels().back()->GetTransform();
+		Mat4 camTransform = Scene::GetInstance().GetCamera()->GetTranform();
+		int frameNum = anim.GetLastFrameNumber() + (int)(timeDiff * (double)framesPerSeconds);
+
+		anim.AddKeyFrame(modelTransform, camTransform, frameNum);
+
+		std::stringstream ss;
+		ss << "Added new key frame at frame: " << frameNum;
+		WriteToStatusBar(ss.str().c_str());
+		
+	}
+
+	CView::OnLButtonUp(nFlags, point);
 }
 
 
@@ -2211,4 +2310,66 @@ void CCGWorkView::OnFogeffectOptions()
 
 	if (isFogEnabled)
 		Invalidate();
+}
+
+
+void CCGWorkView::OnAnimationRecord()
+{
+	if (Scene::GetInstance().GetModels().size() == 0)
+		return;
+
+	isRecording = !isRecording;
+
+	if (isRecording)
+	{
+		if (anim.GetFrame(0) == NULL)
+		{
+			// Add key frame
+			Mat4 modelTransform = Scene::GetInstance().GetModels().back()->GetTransform();
+			Mat4 camTransform = Scene::GetInstance().GetCamera()->GetTranform();
+
+			anim.AddKeyFrame(modelTransform, camTransform, 0);
+		}
+	}
+}
+
+
+void CCGWorkView::OnUpdateAnimationRecord(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(isRecording);
+}
+
+
+void CCGWorkView::OnAnimationPlay()
+{
+	isPlaying = !isPlaying;
+	Invalidate();
+}
+
+
+void CCGWorkView::OnAnimationSavetoimages()
+{
+	if (anim.GetLastFrameNumber() <= 0)
+		return;
+
+	// Set dialog size variables to be the screen size
+	if ((m_exportDialog.GetWidth() == 0) || (m_exportDialog.GetHeight() == 0))
+	{
+		m_exportDialog.SetWidth(m_WindowWidth);
+		m_exportDialog.SetHeight(m_WindowHeight);
+	}
+
+	if (m_exportDialog.DoModal() == IDOK) {
+		imgWidth = m_exportDialog.GetWidth();
+		imgHeight = m_exportDialog.GetHeight();
+		CT2A filename(m_exportDialog.GetFileName());
+
+		imgToSave.SetWidth(imgWidth);
+		imgToSave.SetHeight(imgHeight);
+
+		animFileName = std::string(filename);
+		animFileName = animFileName.substr(0, animFileName.size() - 4);
+		isPlaying = true;
+		saveToFile = true;
+	}
 }

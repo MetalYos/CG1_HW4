@@ -131,6 +131,23 @@ BEGIN
         MENUITEM "&Parameters...",              ID_LIGHT_CONSTANTS
         MENUITEM "Set Material",                ID_LIGHT_SETMATERIAL
     END
+    POPUP "Animation"
+    BEGIN
+        MENUITEM "Record",                      ID_ANIMATION_RECORD
+        MENUITEM "Play",                        ID_ANIMATION_PLAY
+        POPUP "Playback Speed"
+        BEGIN
+            MENUITEM "Normal",                      ID_PLAYBACKSPEED_NORMAL
+            MENUITEM "Increase by 10%",             ID_PLAYBACKSPEED_INCREASEBY10
+            MENUITEM "Decrease by 10%",             ID_PLAYBACKSPEED_DECREASEBY10
+        END
+        POPUP "Interpolation"
+        BEGIN
+            MENUITEM "Linear",                      ID_INTERPOLATION_LINEAR
+            MENUITEM "Bezier",                      ID_INTERPOLATION_BEZIER
+        END
+        MENUITEM "Save to images",              ID_ANIMATION_SAVETOIMAGES
+    END
     POPUP "Rendering"
     BEGIN
         MENUITEM "Wireframe",                   ID_RENDERING_WIREFRAME

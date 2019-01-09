@@ -17,6 +17,7 @@
 #include "Light.h"
 
 #include <vector>
+#include <time.h>
 #include "CColorsDialog.h"
 #include "CPerspectiveDialog.h"
 #include "ALMath.h"
@@ -30,6 +31,7 @@
 #include "CDialogSilhouette.h"
 #include "PngWrapper.h"
 #include "Fog.h"
+#include "Animation.h"
 
 struct DVertex
 {
@@ -130,6 +132,16 @@ private:
 	FogParams fog;
 	bool isFogEnabled;
 
+	// Animation parameters
+	Animation anim;
+	bool isRecording;
+	bool isPlaying;
+	bool isLinearInterpolation;
+	int framesPerSeconds;
+	clock_t m_MouseDownTicks;
+	std::string animFileName;
+	bool doneRendering = true;
+
 	// Quick hack
 	std::vector< std::vector<Edge> > selectedPolys;
 
@@ -193,6 +205,8 @@ protected:
 	bool IsSilhouetteEdge(const PolyEdge* e, const Mat4& modelTransform, const Mat4& normalTransform, const Mat4& camTransform);
 	Vec4 CalculateVertexNormal(const Vertex* v, const Mat4& modelTransform, const Mat4& normalTransform, const Mat4& camTransform);
 	COLORREF GetColorWithFog(const Vec4& posVS, COLORREF objColor);
+	void WriteToStatusBar(const CString& str);
+	COLORREF Vec4ToColor(const Vec4& c) const;
 	virtual void RenderScene();
 
 
@@ -283,6 +297,11 @@ public:
 	afx_msg void OnFogeffectEnable();
 	afx_msg void OnUpdateFogeffectEnable(CCmdUI *pCmdUI);
 	afx_msg void OnFogeffectOptions();
+	afx_msg void OnAnimationRecord();
+	afx_msg void OnUpdateAnimationRecord(CCmdUI *pCmdUI);
+	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
+	afx_msg void OnAnimationPlay();
+	afx_msg void OnAnimationSavetoimages();
 };
 
 #ifndef _DEBUG  // debug version in CGWorkView.cpp

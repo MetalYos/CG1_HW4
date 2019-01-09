@@ -5,6 +5,7 @@
 #include "Camera.h"
 #include "ALMath.h"
 #include "Light.h"
+#include "Animation.h"
 
 class Scene
 {
@@ -53,6 +54,5 @@ public:
 	int GetFineNess() const;
 
 	void DeleteModels();
-	
 };
 
