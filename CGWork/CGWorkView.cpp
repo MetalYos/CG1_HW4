@@ -171,7 +171,7 @@ CCGWorkView::CCGWorkView()
 	mouseClicked = false;
 	m_sensitivity = Vec4(100, 100, 300);
 	orthoHeight = 5.0;
-	m_nCoordSpace = ID_BUTTON_VIEW;
+	m_nCoordSpace = ID_BUTTON_OBJECT;
 	normalSizeFactor = 0.5;
 	showGeos = true;
 	aroundEye = true;
@@ -192,6 +192,7 @@ CCGWorkView::CCGWorkView()
 	isPlaying = false;
 	isLinearInterpolation = true;
 	framesPerSeconds = 30;
+	scaleFactor = 1.0;
 }
 
 CCGWorkView::~CCGWorkView()
@@ -704,18 +705,12 @@ void CCGWorkView::DrawBoundingBox(CDC * pDC, const std::vector<Poly*>& polys, co
 	}
 }
 
-void CCGWorkView::DrawVertexNormal(CDC* pDC, const Vertex* v, const Vec4& normal,
-	const Mat4 & modelTransform, const Mat4 & camTransform, const Mat4 & projection,
-	const Mat4 & toView, COLORREF color)
+void CCGWorkView::DrawVertexNormal(CDC* pDC, const Vec4& vertPosVS, const Vec4& normalVS, 
+	const Mat4 & projection, const Mat4 & toView, COLORREF color)
 {
-	// Transform vertex position to view space
-	Vec4 startPos = v->Pos * modelTransform * camTransform;
-
-	// Normalize normal
-	Vec4 norm = Vec4::Normalize3(normal);
-
-	// Calculate endPos
-	Vec4 endPos = startPos + norm * normalSizeFactor;
+	Vec4 startPos = vertPosVS;
+	Vec4 normal = Vec4::Normalize3(normalVS);
+	Vec4 endPos = startPos + normal * normalSizeFactor;
 
 	// Transform Start and End Pos to screen space
 	startPos = startPos * projection;
@@ -732,18 +727,11 @@ void CCGWorkView::DrawVertexNormal(CDC* pDC, const Vertex* v, const Vec4& normal
 	DrawLine(pDC, color, startPosPix, endPosPix);
 }
 
-void CCGWorkView::DrawPolyNormal(CDC * pDC, const Poly * p, const Mat4 & modelTransform, 
-	const Mat4 & normalTransform, const Mat4 & camTransform, const Mat4 & projection, 
-	const Mat4 & toView, COLORREF color)
+void CCGWorkView::DrawPolyNormal(CDC* pDC, const Vec4& polyCenterVS, const Vec4& normalVS, 
+	const Mat4& projection, const Mat4& toView, COLORREF color)
 {
-	// Transform poly center position to view space
-	Vec4 polyCenter = p->Center * modelTransform * camTransform;
-
-	// Transform normal to view space
-	Vec4 normal = Scene::GetInstance().GetCalcNormalState() ?
-		p->CalcNormal : p->Normal;
-	normal *= normalSign;
-	normal = normal * normalTransform * camTransform;
+	Vec4 polyCenter = polyCenterVS;
+	Vec4 normal = normalVS;
 	normal = Vec4::Normalize3(normal);
 
 	// Calculate endPos
@@ -816,7 +804,7 @@ void CCGWorkView::DrawBackground(CDC* pDC, CRect r)
 	}
 	else {
 		COLORREF bGColorRef = m_colorDialog.BackgroundColor;
-		if (isFogEnabled && currentPolySelection != WIREFRAME)
+		if ((isFogEnabled && currentPolySelection != WIREFRAME) || (isFogEnabled && saveToFile))
 			bGColorRef = RGB(fog.Color[0], fog.Color[1], fog.Color[2]);
 
 		if (!saveToFile)
@@ -831,12 +819,11 @@ void CCGWorkView::DrawBackground(CDC* pDC, CRect r)
 }
 
 void CCGWorkView::DrawSilhouetteEdges(CDC * pDC, Geometry* geo, const Mat4 & modelTransform,
-	const Mat4 & normalTransform, const Mat4 & camTransform, const Mat4 & projection,
-	const Mat4 & toView, COLORREF color)
+	const Mat4 & camTransform, const Mat4 & projection, const Mat4 & toView, COLORREF color)
 {
 	for (PolyEdge* e : geo->Edges)
 	{
-		if (IsSilhouetteEdge(e, modelTransform, normalTransform, camTransform))
+		if (IsSilhouetteEdge(e, modelTransform, camTransform, projection))
 		{
 			// Transform from object space to projected space
 			Vec4 p1 = e->A->Pos * modelTransform * camTransform * projection;
@@ -1056,15 +1043,15 @@ Vec4 CCGWorkView::CalculateShading(LightParams* lights, Material* material, Vec4
 	return Vec4(min(sum[0], 1.0), min(sum[1], 1.0), min(sum[2], 1.0));
 }
 
-bool CCGWorkView::IsBackFace(const Poly* p, const Mat4& modelTransform, const Mat4& normalTransform, const Mat4& camTransform)
+bool CCGWorkView::IsBackFace(const Poly* p, const Mat4& modelTransform, const Mat4& camTransform, const Mat4& projection)
 {
-	Mat4 projection = Scene::GetInstance().GetCamera()->GetProjection();
 	Vec4 normal = Scene::GetInstance().GetCalcNormalState() ?
-		p->CalcNormal : p->Normal;
+		CalculatePolyNormal(p, modelTransform, camTransform) :
+		p->Normal * modelTransform * camTransform;
 	normal *= normalSign;
+	normal = Vec4::Normalize3(normal);
 
-	// Transform normal and poly center to View Space
-	normal = Vec4::Normalize3(normal * normalTransform * camTransform);
+	// Transform poly center to View Space
 	Vec4 center = p->Center * modelTransform * camTransform;
 
 	if (m_bIsPerspective)
@@ -1078,33 +1065,39 @@ bool CCGWorkView::IsBackFace(const Poly* p, const Mat4& modelTransform, const Ma
 	return normal[2] < 0;
 }
 
-bool CCGWorkView::IsSilhouetteEdge(const PolyEdge* e, const Mat4 & modelTransform, const Mat4 & normalTransform, const Mat4 & camTransform)
+bool CCGWorkView::IsSilhouetteEdge(const PolyEdge* e, const Mat4 & modelTransform, const Mat4 & camTransform, const Mat4 & projection)
 {
 	if (e->Polys.size() != 2)
 		return false;
 
-	bool isPoly1BF = IsBackFace(e->Polys[0], modelTransform, normalTransform, camTransform);
-	bool isPoly2BF = IsBackFace(e->Polys[1], modelTransform, normalTransform, camTransform);
+	bool isPoly1BF = IsBackFace(e->Polys[0], modelTransform, camTransform, projection);
+	bool isPoly2BF = IsBackFace(e->Polys[1], modelTransform, camTransform, projection);
 	return (isPoly1BF ^ isPoly2BF);
 }
 
-Vec4 CCGWorkView::CalculateVertexNormal(const Vertex * v, const Mat4 & modelTransform, const Mat4& normalTransform, const Mat4 & camTransform)
+Vec4 CCGWorkView::CalculatePolyNormal(const Poly * p, const Mat4 & modelTransform, const Mat4 & camTransform)
+{
+	Vec4 normal;
+	if (p->Vertices.size() > 3)
+	{
+		Vec4 u = p->Vertices[0]->Pos * modelTransform * camTransform;
+		Vec4 v = p->Vertices[1]->Pos * modelTransform * camTransform;
+		Vec4 w = p->Vertices[2]->Pos * modelTransform * camTransform;
+
+		Vec4 norm = Vec4::Cross(u - v, v - w);
+		normal += Vec4::Normalize3(norm);
+	}
+	else
+		normal += p->Normal * modelTransform * camTransform;
+
+	return normal;
+}
+
+Vec4 CCGWorkView::CalculateVertexNormal(const Vertex * v, const Mat4 & modelTransform, const Mat4 & camTransform)
 {
 	Vec4 normal;
 	for (Poly* p : v->Polys)
-	{
-		if (p->Vertices.size() > 3)
-		{
-			Vec4 u = p->Vertices[0]->Pos * modelTransform * camTransform;
-			Vec4 v = p->Vertices[1]->Pos * modelTransform * camTransform;
-			Vec4 w = p->Vertices[2]->Pos * modelTransform * camTransform;
-
-			Vec4 norm = Vec4::Cross(u - v, v - w);
-			normal += Vec4::Normalize3(norm);
-		}
-		else
-			normal += p->Normal * normalTransform * camTransform;
-	}
+		normal += CalculatePolyNormal(p, modelTransform, camTransform);
 
 	normal /= v->Polys.size();
 	normal = Vec4::Normalize3(normal);
@@ -1258,7 +1251,6 @@ void CCGWorkView::OnDraw(CDC* pDC)
 		for (Model* model : models)
 		{
 			Mat4 transform = model->GetTransform();
-			Mat4 normalTransform = model->GetNormalTransform();
 			COLORREF color = isCColorDialogOpen ? m_colorDialog.WireframeColor : 
 				Vec4ToColor(model->GetColor());
 			COLORREF normalColor = isCColorDialogOpen ? m_colorDialog.NormalColor :
@@ -1286,7 +1278,7 @@ void CCGWorkView::OnDraw(CDC* pDC)
 					std::vector<Vec4Line> polyEdges;
 
 					// Check Backface culling, and draw only if it is front facing
-					if (isBFCulling && IsBackFace(p, transform, normalTransform, camTransform))
+					if (isBFCulling && IsBackFace(p, transform, camTransform, projection))
 						continue;
 
 					for (unsigned int i = 0; i < p->Vertices.size(); i++)
@@ -1319,12 +1311,12 @@ void CCGWorkView::OnDraw(CDC* pDC)
 						// Get vertex normal from file and transform it to view space
 						// Or calculate it and get it already in view space
 						Vec4 normal1VS = Scene::GetInstance().GetCalcNormalState() ?
-							CalculateVertexNormal(p->Vertices[i], transform, normalTransform, camTransform) :
-							p->Vertices[i]->Normal * normalTransform * camTransform;;
+							CalculateVertexNormal(p->Vertices[i], transform, camTransform) :
+							p->Vertices[i]->Normal * transform * camTransform;;
 						normal1VS *= normalSign;
 						Vec4 normal2VS = Scene::GetInstance().GetCalcNormalState() ?
-							CalculateVertexNormal(p->Vertices[(i + 1) % p->Vertices.size()], transform, normalTransform, camTransform) :
-							p->Vertices[(i + 1) % p->Vertices.size()]->Normal * normalTransform * camTransform;;
+							CalculateVertexNormal(p->Vertices[(i + 1) % p->Vertices.size()], transform, camTransform) :
+							p->Vertices[(i + 1) % p->Vertices.size()]->Normal * transform * camTransform;
 						normal2VS *= normalSign;
 
 						// Save parameters in DVertex
@@ -1350,8 +1342,8 @@ void CCGWorkView::OnDraw(CDC* pDC)
 						// Draw vertex normal if needed
 						if (Scene::GetInstance().AreVertexNormalsOn())
 						{
-							DrawVertexNormal(pDCToUse, p->Vertices[i], normal1VS, transform,
-								camTransform, projection, toView, normalColor);
+							DrawVertexNormal(pDCToUse, dVertex1.PosVS, normal1VS,
+								projection, toView, normalColor);
 						}
 					}
 
@@ -1365,9 +1357,9 @@ void CCGWorkView::OnDraw(CDC* pDC)
 
 					Vec4 polyCenter = p->Center * transform * camTransform;
 					Vec4 normal = Scene::GetInstance().GetCalcNormalState() ?
-						p->CalcNormal : p->Normal;
-					normal = normal * normalTransform * camTransform;
-					normal *= normalSign;
+						CalculatePolyNormal(p, transform, camTransform) : 
+						p->Normal * transform * camTransform;
+					normal *= normalSign; // Poly normal in View Space coordinates
 
 					// Draw poly in wireframe mode or fill it, according to user selection
 					if (currentPolySelection == WIREFRAME && !saveToFile)
@@ -1378,8 +1370,8 @@ void CCGWorkView::OnDraw(CDC* pDC)
 					// Draw poly normal if needed
 					if (Scene::GetInstance().ArePolyNormalsOn())
 					{
-						DrawPolyNormal(pDCToUse, p, transform, normalTransform,
-							camTransform, projection, toView, normalColor);
+						DrawPolyNormal(pDCToUse, polyCenter, normal, 
+							projection, toView, normalColor);
 					}
 				}
 
@@ -1392,7 +1384,7 @@ void CCGWorkView::OnDraw(CDC* pDC)
 				// Draw Silhouette Edges if needed
 				if (showSil)
 				{
-					DrawSilhouetteEdges(pDCToUse, geo, transform, normalTransform, camTransform, 
+					DrawSilhouetteEdges(pDCToUse, geo, transform, camTransform, 
 						projection, toView, silColor);
 				}
 			}
@@ -1537,6 +1529,7 @@ void CCGWorkView::OnFileLoad()
 
 		// Clear Animation
 		anim.ClearAnimation();
+		isRecording = false;
 
 		isModelLoaded = true;
 		Invalidate();	// force a WM_PAINT for drawing.
@@ -1781,6 +1774,7 @@ void CCGWorkView::OnTimer(UINT_PTR nIDEvent)
 void CCGWorkView::OnLButtonDown(UINT nFlags, CPoint point)
 {
 	prevMousePos = point;
+	m_MouseClickPos = point;
 
 	if (m_nAction == ID_ACTION_SELECT && Scene::GetInstance().GetModels().size() > 0)
 	{
@@ -1790,7 +1784,10 @@ void CCGWorkView::OnLButtonDown(UINT nFlags, CPoint point)
 	}
 
 	if (isRecording)
+	{
 		m_MouseDownTicks = clock();
+		scaleFactor = 1.0;
+	}
 
 	CView::OnLButtonDown(nFlags, point);
 
@@ -1800,7 +1797,6 @@ void CCGWorkView::OnLButtonDown(UINT nFlags, CPoint point)
 void CCGWorkView::OnMouseMove(UINT nFlags, CPoint point)
 {
 	double dx = point.x - prevMousePos.x;
-	double dy = point.y - prevMousePos.y;
 
 	if ((nFlags & MK_LBUTTON) == MK_LBUTTON)
 	{
@@ -1836,14 +1832,14 @@ void CCGWorkView::OnMouseMove(UINT nFlags, CPoint point)
 				if (m_nCoordSpace == ID_BUTTON_OBJECT)
 					model->Rotate(Mat4::RotateY(dx / m_sensitivity[1]));
 				else
-					camera->Rotate(Mat4::RotateY(-dx / m_sensitivity[1]), aroundEye);
+					camera->Rotate(Mat4::RotateY(dx / m_sensitivity[1]), aroundEye);
 			}
 			if (m_isAxis_Z)
 			{
 				if (m_nCoordSpace == ID_BUTTON_OBJECT)
-					model->Rotate(Mat4::RotateZ(dx / m_sensitivity[1]));
+					model->Rotate(Mat4::RotateZ(-dx / m_sensitivity[1]));
 				else
-					camera->Rotate(Mat4::RotateZ(-dx / m_sensitivity[1]), aroundEye);
+					camera->Rotate(Mat4::RotateZ(dx / m_sensitivity[1]), aroundEye);
 			}
 		}
 		else if (m_nAction == ID_ACTION_SCALE)
@@ -1855,6 +1851,8 @@ void CCGWorkView::OnMouseMove(UINT nFlags, CPoint point)
 			x_trans = (x_trans < 0.01) ? 0.01 : x_trans;
 			y_trans = (y_trans < 0.01) ? 0.01 : y_trans;
 			z_trans = (z_trans < 0.01) ? 0.01 : z_trans;
+
+			scaleFactor *= x_trans;
 			
 			if (m_nCoordSpace == ID_BUTTON_OBJECT)
 				model->Scale(Mat4::Scale(x_trans, y_trans, z_trans));
@@ -1873,19 +1871,49 @@ void CCGWorkView::OnLButtonUp(UINT nFlags, CPoint point)
 {
 	if (isRecording)
 	{
+		double dx = point.x - m_MouseClickPos.x;
 		clock_t ticksDiff = clock() - m_MouseDownTicks;
 		double timeDiff = (double)ticksDiff / CLOCKS_PER_SEC;
 
-		Mat4 modelTransform = Scene::GetInstance().GetModels().back()->GetTransform();
-		Mat4 camTransform = Scene::GetInstance().GetCamera()->GetTranform();
-		int frameNum = anim.GetLastFrameNumber() + (int)(timeDiff * (double)framesPerSeconds);
+		Frame* keyFrame = new Frame();
+		keyFrame->ModelTransform = Scene::GetInstance().GetModels().back()->GetTransform();
+		keyFrame->CamTransform = Scene::GetInstance().GetCamera()->GetTranform();
+		keyFrame->FrameNumber = anim.GetLastFrameNumber() + (int)(timeDiff * (double)framesPerSeconds);
+		keyFrame->Action[0] = (m_nAction == ID_ACTION_TRANSLATE);
+		keyFrame->Action[1] = (m_nAction == ID_ACTION_SCALE);
+		keyFrame->Action[2] = (m_nAction == ID_ACTION_ROTATE);
+		keyFrame->ObjectSpace = (m_nCoordSpace == ID_BUTTON_OBJECT);
+		keyFrame->AroundEye = aroundEye;
 
-		anim.AddKeyFrame(modelTransform, camTransform, frameNum);
+		if (m_nAction == ID_ACTION_TRANSLATE)
+		{
+			double offset = dx / m_sensitivity[0];
+			keyFrame->Translation[0] = m_isAxis_X ? offset : 0.0;
+			keyFrame->Translation[1] = m_isAxis_Y ? offset : 0.0;
+			keyFrame->Translation[2] = m_isAxis_Z ? offset : 0.0;
+		}
+		else if (m_nAction == ID_ACTION_ROTATE)
+		{
+			double angle = dx / m_sensitivity[1];
+			keyFrame->Rotation[0] = m_isAxis_X ? angle : 0.0;
+			keyFrame->Rotation[0] = (m_nCoordSpace == ID_BUTTON_OBJECT) ? keyFrame->Rotation[0] : -keyFrame->Rotation[0];
+			keyFrame->Rotation[1] = m_isAxis_Y ? angle : 0.0;
+			keyFrame->Rotation[2] = m_isAxis_Z ? angle : 0.0;
+			keyFrame->Rotation[2] = (m_nCoordSpace == ID_BUTTON_OBJECT) ? -keyFrame->Rotation[2] : keyFrame->Rotation[2];
+		}
+		else
+		{
+			scaleFactor = (scaleFactor < 0.01) ? 0.01 : scaleFactor;
+			keyFrame->Scale[0] = m_isAxis_X ? scaleFactor : 1.0;
+			keyFrame->Scale[1] = m_isAxis_Y ? scaleFactor : 1.0;
+			keyFrame->Scale[2] = m_isAxis_Z ? scaleFactor : 1.0;
+		}
+
+		anim.AddKeyFrame(keyFrame);
 
 		std::stringstream ss;
-		ss << "Added new key frame at frame: " << frameNum;
+		ss << "Added new key frame at frame: " << keyFrame->FrameNumber;
 		WriteToStatusBar(ss.str().c_str());
-		
 	}
 
 	CView::OnLButtonUp(nFlags, point);
@@ -2329,10 +2357,12 @@ void CCGWorkView::OnAnimationRecord()
 		if (anim.GetFrame(0) == NULL)
 		{
 			// Add key frame
-			Mat4 modelTransform = Scene::GetInstance().GetModels().back()->GetTransform();
-			Mat4 camTransform = Scene::GetInstance().GetCamera()->GetTranform();
+			Frame* keyFrame = new Frame();
+			keyFrame->ModelTransform = Scene::GetInstance().GetModels().back()->GetTransform();
+			keyFrame->CamTransform = Scene::GetInstance().GetCamera()->GetTranform();
+			keyFrame->FrameNumber = 0;
 
-			anim.AddKeyFrame(modelTransform, camTransform, 0);
+			anim.AddKeyFrame(keyFrame);
 		}
 	}
 }

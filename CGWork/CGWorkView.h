@@ -139,8 +139,9 @@ private:
 	bool isLinearInterpolation;
 	int framesPerSeconds;
 	clock_t m_MouseDownTicks;
+	CPoint m_MouseClickPos;
+	double scaleFactor; // Keeps track of the scale when recording
 	std::string animFileName;
-	bool doneRendering = true;
 
 	// Quick hack
 	std::vector< std::vector<Edge> > selectedPolys;
@@ -155,16 +156,13 @@ private:
 	void DrawSelectedPolys(CDC* pDC);
 	void DrawBoundingBox(CDC* pDC, const std::vector<Poly*>& polys, const Mat4& modelTransform,
 		const Mat4& camTransform, const Mat4& projection, const Mat4& toView, COLORREF color);
-	void DrawVertexNormal(CDC* pDC, const Vertex* v, const Vec4& normal,
-		const Mat4& modelTransform, const Mat4& camTransform, const Mat4& projection,
-		const Mat4& toView, COLORREF color);
-	void DrawPolyNormal(CDC* pDC, const Poly* p, const Mat4& modelTransform,
-		const Mat4 & normalTransform, const Mat4& camTransform, const Mat4& projection,
+	void DrawVertexNormal(CDC* pDC, const Vec4& vertPosVS, const Vec4& normalVS,
+		const Mat4& projection, const Mat4& toView, COLORREF color);
+	void DrawPolyNormal(CDC* pDC, const Vec4& polyCenterVS, const Vec4& normalVS, const Mat4& projection,
 		const Mat4& toView, COLORREF color);
 	void DrawBackground(CDC* pDC, CRect r);
 	void DrawSilhouetteEdges(CDC * pDC, Geometry* geo, const Mat4 & modelTransform,
-		const Mat4 & normalTransform, const Mat4 & camTransform, const Mat4 & projection,
-		const Mat4 & toView, COLORREF color);
+		const Mat4 & camTransform, const Mat4 & projection, const Mat4 & toView, COLORREF color);
 
 	//Dialogs
 	CColorsDialog m_colorDialog; 
@@ -201,9 +199,10 @@ protected:
 	BOOL SetupViewingFrustum(void);
 	BOOL SetupViewingOrthoConstAspect(void);
 	Vec4 CalculateShading(LightParams* lights, Material* material, Vec4 pos, Vec4 normal, COLORREF color);
-	bool IsBackFace(const Poly* p, const Mat4& modelTransform, const Mat4& normalTransform, const Mat4& camTransform);
-	bool IsSilhouetteEdge(const PolyEdge* e, const Mat4& modelTransform, const Mat4& normalTransform, const Mat4& camTransform);
-	Vec4 CalculateVertexNormal(const Vertex* v, const Mat4& modelTransform, const Mat4& normalTransform, const Mat4& camTransform);
+	bool IsBackFace(const Poly* p, const Mat4& modelTransform, const Mat4& camTransform, const Mat4& projection);
+	bool IsSilhouetteEdge(const PolyEdge* e, const Mat4& modelTransform, const Mat4& camTransform, const Mat4& projection);
+	Vec4 CalculatePolyNormal(const Poly* p, const Mat4& modelTransform, const Mat4& camTransform);
+	Vec4 CalculateVertexNormal(const Vertex* v, const Mat4& modelTransform, const Mat4& camTransform);
 	COLORREF GetColorWithFog(const Vec4& posVS, COLORREF objColor);
 	void WriteToStatusBar(const CString& str);
 	COLORREF Vec4ToColor(const Vec4& c) const;

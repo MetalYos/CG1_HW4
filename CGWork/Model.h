@@ -10,7 +10,6 @@ private:
 	std::vector<Geometry*> geos;
 	Material* material;
 	Mat4 transform;
-	Mat4 normalTransform;
 	Vec4 color;
 	Vec4 normalColor;
 
@@ -26,7 +25,6 @@ public:
 	void AddGeometry(Geometry* geo);
 
 	const Mat4& GetTransform() const;
-	const Mat4& GetNormalTransform() const;
 	void Translate(const Mat4& T);
 	void Scale(const Mat4& S);
 	void Rotate(const Mat4& R);

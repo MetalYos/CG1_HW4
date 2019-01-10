@@ -33,11 +33,6 @@ const Mat4& Model::GetTransform() const
 	return transform;
 }
 
-const Mat4 & Model::GetNormalTransform() const
-{
-	return normalTransform;
-}
-
 void Model::Translate(const Mat4 & T)
 {
 	transform = T * transform;
@@ -46,13 +41,11 @@ void Model::Translate(const Mat4 & T)
 void Model::Scale(const Mat4 & S)
 {
 	transform = S * transform;
-	normalTransform = Mat4::Scale(1.0 / S[0][0], 1.0 / S[1][1], 1.0 / S[2][2]) * transform;
 }
 
 void Model::Rotate(const Mat4 & R)
 {
 	transform = R * transform;
-	normalTransform = R * normalTransform;
 }
 
 const std::vector<Geometry*>& Model::GetGeometries() const

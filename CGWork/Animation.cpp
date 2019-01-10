@@ -1,19 +1,18 @@
 #include "Animation.h"
 #include <assert.h>
+#include "Scene.h"
 
-void Animation::AddKeyFrame(const Mat4& modelTransform, const Mat4& camTransform, int frameNumber)
+void Animation::AddKeyFrame(Frame* keyFrame)
 {
-	assert(frameNumber > maxFrame);
-	
-	Frame* frame = new Frame();
-	frame->ModelTransform = modelTransform;
-	frame->CamTransform = camTransform;
-	frame->FrameNumber = frameNumber;
+	if (keyFrame == NULL)
+		return;
 
-	keyFrames.push_back(frame);
-	maxFrame = frameNumber;
+	assert(keyFrame->FrameNumber > maxFrame);
 
-	if (frameNumber == 0)
+	keyFrames.push_back(keyFrame);
+	maxFrame = keyFrame->FrameNumber;
+
+	if (keyFrame->FrameNumber == 0)
 		currentFrame = GetFrame(0);
 }
 
@@ -90,15 +89,80 @@ void Animation::ClearAnimation()
 		delete frame;
 	}
 	currentFrame = NULL;
+	maxFrame = -1;
 }
 
-Frame* Animation::GetFrameLinearInterpolation(Frame* before, Frame* after, int frame) const
+Frame* Animation::GetFrameLinearInterpolation2(Frame* before, Frame* after, int frame) const
 {
 	Frame* result = new Frame();
 	double t = (double)(frame - before->FrameNumber) / (after->FrameNumber - before->FrameNumber);
 
 	result->ModelTransform = before->ModelTransform * (1.0 - t) + after->ModelTransform * t;
 	result->CamTransform = before->CamTransform * (1.0 - t) + after->CamTransform * t;
+	result->FrameNumber = frame;
+
+	return result;
+}
+
+Frame* Animation::GetFrameLinearInterpolation(Frame * before, Frame * after, int frame) const
+{
+	Frame* result = new Frame();
+	double t = (double)(frame - before->FrameNumber) / (after->FrameNumber - before->FrameNumber);
+
+	// Set initial matricies
+	Mat4 modelTransform = before->ModelTransform;
+	Mat4 camTransform = before->CamTransform;
+
+	// Calculate delta interpolation
+	Vec4 transform = Vec4(0.0, 0.0, 0.0, 1.0) * (1.0 - t) + after->Translation * t;
+	Vec4 scale = Vec4(1.0, 1.0, 1.0, 1.0) * (1.0 - t) + after->Scale * t;
+	Vec4 rotation = Vec4(0.0, 0.0, 0.0, 1.0) * (1.0 - t) + after->Rotation * t;
+
+	// Multiply according to coordinates space and action
+	if (after->ObjectSpace)
+	{
+		if (after->Action[0])
+			modelTransform = Mat4::Translate(transform) * modelTransform;
+		else if (after->Action[1])
+			modelTransform = Mat4::Scale(scale) * modelTransform;
+		else
+			modelTransform = Mat4::RotateX(rotation[0]) * Mat4::RotateY(rotation[1])
+			* Mat4::RotateZ(rotation[2]) * modelTransform;
+	}
+	else
+	{
+		if (after->Action[0])
+			camTransform = camTransform * Mat4::Translate(transform);
+		else if (after->Action[1])
+		{
+			Mat4 S = Mat4::Scale(scale);
+			if (after->AroundEye)
+			{
+				CameraParameters camParams = Scene::GetInstance().GetCamera()->GetCameraParameters();
+				camTransform = camTransform * Mat4::Translate(camParams.EyeCam) * S *
+					Mat4::Translate(-camParams.EyeCam);
+			}
+			else
+				camTransform = camTransform * S;
+		}
+		else
+		{
+			Mat4 R = Mat4::RotateX(rotation[0])
+				* Mat4::RotateY(rotation[1]) * Mat4::RotateZ(rotation[2]);
+			if (after->AroundEye)
+			{
+				CameraParameters camParams = Scene::GetInstance().GetCamera()->GetCameraParameters();
+				camTransform = camTransform * Mat4::Translate(camParams.EyeCam) * R *
+					Mat4::Translate(-camParams.EyeCam);
+			}
+			else
+				camTransform = camTransform * R;
+		}
+	}
+
+	// Create the frame to return
+	result->ModelTransform = modelTransform;
+	result->CamTransform = camTransform;
 	result->FrameNumber = frame;
 
 	return result;
