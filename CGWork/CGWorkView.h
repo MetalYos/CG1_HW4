@@ -143,27 +143,31 @@ private:
 	double scaleFactor; // Keeps track of the scale when recording
 	std::string animFileName;
 
+	//AntiAliasing 
+	typedef int* BUFFER;
+	BUFFER m_FrameBuffer;
+
 	// Quick hack
 	std::vector< std::vector<Edge> > selectedPolys;
 
 	// Drawing functions
 	int GetOctant(CPoint a, CPoint b);
-	void DrawPointOctant(CDC * pDC, int x, int y, COLORREF color, const CPoint& origA, int oct, int thickness = 0);
+	void DrawPointOctant(int x, int y, COLORREF color, const CPoint& origA, int oct, int thickness = 0);
 	CPoint TranslateBToFirstOctant(const CPoint& a, const CPoint& b, int oct);
 	CPoint TranslatePointFrom8th(CPoint p, int oct);
 	CPoint TranslatePointTo8th(CPoint p, int oct);
 	void SetSelectedPoly(CPoint mousePos, Poly* p, std::vector<Vec4Line> poly);
-	void DrawSelectedPolys(CDC* pDC);
-	void DrawBoundingBox(CDC* pDC, const std::vector<Poly*>& polys, const Mat4& modelTransform,
+	void DrawSelectedPolys();
+	void DrawBoundingBox(const std::vector<Poly*>& polys, const Mat4& modelTransform,
 		const Mat4& camTransform, const Mat4& projection, const Mat4& toView, COLORREF color);
-	void DrawVertexNormal(CDC* pDC, const Vec4& vertPosVS, const Vec4& normalVS,
+	void DrawVertexNormal(const Vec4& vertPosVS, const Vec4& normalVS,
 		const Mat4& projection, const Mat4& toView, COLORREF color);
-	void DrawPolyNormal(CDC* pDC, const Vec4& polyCenterVS, const Vec4& normalVS, const Mat4& projection,
+	void DrawPolyNormal(const Vec4& polyCenterVS, const Vec4& normalVS, const Mat4& projection,
 		const Mat4& toView, COLORREF color);
-	void DrawBackground(CDC* pDC, CRect r);
-	void DrawSilhouetteEdges(CDC * pDC, Geometry* geo, const Mat4 & modelTransform,
+	void DrawBackground();
+	void DrawSilhouetteEdges(Geometry* geo, const Mat4 & modelTransform,
 		const Mat4 & camTransform, const Mat4 & projection, const Mat4 & toView, COLORREF color);
-
+	void SetPixelBuffer(int x, int y, COLORREF color);
 	//Dialogs
 	CColorsDialog m_colorDialog; 
 	CPerspectiveDialog m_perspDialog;
@@ -180,9 +184,9 @@ public:
 
 	virtual void OnDraw(CDC* pDC);  // overridden to draw this view
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
-	void DrawLine(CDC* pDC, COLORREF color, CPoint a, CPoint b, int thickness = 0);
-	void DrawPoly(CDC* pDc, std::vector<Edge>);
-	void ScanConvert(CDC* pDc, std::vector<Edge> poly, COLORREF color, Vec4 polyCenter = Vec4(0.0), Vec4 polyNormal = Vec4(0.0));
+	void DrawLine(COLORREF color, CPoint a, CPoint b, int thickness = 0);
+	void DrawPoly(std::vector<Edge>);
+	void ScanConvert(std::vector<Edge> poly, COLORREF color, Vec4 polyCenter = Vec4(0.0), Vec4 polyNormal = Vec4(0.0));
 	protected:
 	//}}AFX_VIRTUAL
 
@@ -309,6 +313,7 @@ public:
 	afx_msg void OnPlaybackspeedNormal();
 	afx_msg void OnPlaybackspeedIncrease();
 	afx_msg void OnPlaybackspeedDecrease();
+	afx_msg void OnPaint();
 };
 
 #ifndef _DEBUG  // debug version in CGWorkView.cpp

@@ -127,6 +127,7 @@ BEGIN_MESSAGE_MAP(CCGWorkView, CView)
 	ON_COMMAND(ID_PLAYBACKSPEED_NORMAL, &CCGWorkView::OnPlaybackspeedNormal)
 	ON_COMMAND(ID_PLAYBACKSPEED_INCREASE, &CCGWorkView::OnPlaybackspeedIncrease)
 	ON_COMMAND(ID_PLAYBACKSPEED_DECREASE, &CCGWorkView::OnPlaybackspeedDecrease)
+	ON_WM_PAINT()
 END_MESSAGE_MAP()
 
 // A patch to fix GLaux disappearance from VS2005 to VS2008
@@ -196,6 +197,9 @@ CCGWorkView::CCGWorkView()
 	isLinearInterpolation = true;
 	framesPerSeconds = 30;
 	scaleFactor = 1.0;
+
+	//AntiAliasing
+	m_FrameBuffer = NULL;
 }
 
 CCGWorkView::~CCGWorkView()
@@ -242,7 +246,7 @@ BOOL CCGWorkView::PreCreateWindow(CREATESTRUCT& cs)
 	return CView::PreCreateWindow(cs);
 }
 
-void CCGWorkView::DrawLine(CDC * pDC, COLORREF color, CPoint a, CPoint b, int thickness)
+void CCGWorkView::DrawLine( COLORREF color, CPoint a, CPoint b, int thickness)
 {
 	int oct = GetOctant(a, b);
 	b = TranslateBToFirstOctant(a, b, oct);
@@ -255,7 +259,7 @@ void CCGWorkView::DrawLine(CDC * pDC, COLORREF color, CPoint a, CPoint b, int th
 	d = 2 * dy - dx;
 	De = 2 * dy;
 	Dne = 2 * (dy - dx);
-	DrawPointOctant(pDC, x, y, color, a, oct, thickness);
+	DrawPointOctant(x, y, color, a, oct, thickness);
 	while (x < b.x) {
 		if (d < 0) {
 			d += De;
@@ -266,14 +270,14 @@ void CCGWorkView::DrawLine(CDC * pDC, COLORREF color, CPoint a, CPoint b, int th
 			x++;
 			y++;
 		}
-		DrawPointOctant(pDC, x, y, color, a, oct, thickness);
+		DrawPointOctant(x, y, color, a, oct, thickness);
 	}
 }
 
-void CCGWorkView::DrawPoly(CDC * pDc, std::vector<Edge> edges)
+void CCGWorkView::DrawPoly(std::vector<Edge> edges)
 {
 	for (Edge e : edges) {
-		DrawLine(pDc, e.color, e.A.Pixel, e.B.Pixel);
+		DrawLine(e.color, e.A.Pixel, e.B.Pixel);
 	}
 }
 
@@ -323,7 +327,7 @@ public:
 	}
 };
 
-void CCGWorkView::ScanConvert(CDC* pDc, std::vector<Edge> poly, COLORREF color, Vec4 polyCenter, Vec4 polyNormal)
+void CCGWorkView::ScanConvert(std::vector<Edge> poly, COLORREF color, Vec4 polyCenter, Vec4 polyNormal)
 {
 	assert(poly.size() > 2);
 	COLORREF objectColor = color;
@@ -512,7 +516,7 @@ void CCGWorkView::ScanConvert(CDC* pDc, std::vector<Edge> poly, COLORREF color, 
 						color = GetColorWithFog(pos, color);
 
 					if (!saveToFile)
-						pDc->SetPixel(x, y, color);
+						SetPixelBuffer(x, y, color);
 					else
 						imgToSave.SetValue(x, y, SET_RGB(GET_A(color), GET_B(color), GET_G(color)));
 					zBuffer[index] = zp;
@@ -561,15 +565,15 @@ int CCGWorkView::GetOctant(CPoint a, CPoint b)
 	}
 }
 
-void CCGWorkView::DrawPointOctant(CDC * pDC, int x, int y, COLORREF color, const CPoint& origA, int oct, int thickness)
+void CCGWorkView::DrawPointOctant(int x, int y, COLORREF color, const CPoint& origA, int oct, int thickness)
 {
 	CPoint normalized = CPoint(x - origA.x, y - origA.y);
 	CPoint transformed = TranslatePointFrom8th(normalized, oct);
 	CPoint actualPoint = origA + transformed;
 
 	if (thickness == 0)
-		if(!saveToFile)
-			pDC->SetPixel(actualPoint, color);
+		if (!saveToFile)
+			SetPixelBuffer(actualPoint.x, actualPoint.y, color);
 		else
 			imgToSave.SetValue(actualPoint.x, actualPoint.y, SET_RGB(GET_A(color), GET_B(color), GET_G(color)));
 	else
@@ -596,10 +600,8 @@ void CCGWorkView::DrawPointOctant(CDC * pDC, int x, int y, COLORREF color, const
 		{
 			for (int y = startY; y <= endY; y++)
 			{
-				pix.x = x;
-				pix.y = y;
 				if (!saveToFile)
-					pDC->SetPixel(pix, color);
+					SetPixelBuffer(x, y, color);
 				else
 					imgToSave.SetValue(x, y, SET_RGB(GET_A(color), GET_B(color), GET_G(color)));
 			}
@@ -662,7 +664,7 @@ void CCGWorkView::SetSelectedPoly(CPoint mousePos, Poly* p, std::vector<Vec4Line
 		p->IsSelected = false;
 }
 
-void CCGWorkView::DrawSelectedPolys(CDC* pDC)
+void CCGWorkView::DrawSelectedPolys()
 {
 	for (std::vector<Edge>& poly : selectedPolys)
 	{
@@ -670,12 +672,12 @@ void CCGWorkView::DrawSelectedPolys(CDC* pDC)
 		{
 			edge.color = AL_YELLO_CREF;
 		}
-		DrawPoly(pDC, poly);
+		DrawPoly(poly);
 	}
 	selectedPolys.clear();
 }
 
-void CCGWorkView::DrawBoundingBox(CDC * pDC, const std::vector<Poly*>& polys, const Mat4 & modelTransform, const Mat4 & camTransform, const Mat4 & projection, const Mat4 & toView, COLORREF color)
+void CCGWorkView::DrawBoundingBox(const std::vector<Poly*>& polys, const Mat4 & modelTransform, const Mat4 & camTransform, const Mat4 & projection, const Mat4 & toView, COLORREF color)
 {
 	for (Poly* p : polys)
 	{
@@ -704,11 +706,11 @@ void CCGWorkView::DrawBoundingBox(CDC * pDC, const std::vector<Poly*>& polys, co
 			poly.push_back({ dv1, dv2 , color });
 		}
 
-		DrawPoly(pDC, poly);
+		DrawPoly(poly);
 	}
 }
 
-void CCGWorkView::DrawVertexNormal(CDC* pDC, const Vec4& vertPosVS, const Vec4& normalVS, 
+void CCGWorkView::DrawVertexNormal(const Vec4& vertPosVS, const Vec4& normalVS, 
 	const Mat4 & projection, const Mat4 & toView, COLORREF color)
 {
 	Vec4 startPos = vertPosVS;
@@ -727,10 +729,10 @@ void CCGWorkView::DrawVertexNormal(CDC* pDC, const Vec4& vertPosVS, const Vec4& 
 	// Draw normal
 	CPoint startPosPix((int)startPos[0], (int)startPos[1]);
 	CPoint endPosPix((int)endPos[0], (int)endPos[1]);
-	DrawLine(pDC, color, startPosPix, endPosPix);
+	DrawLine(color, startPosPix, endPosPix);
 }
 
-void CCGWorkView::DrawPolyNormal(CDC* pDC, const Vec4& polyCenterVS, const Vec4& normalVS, 
+void CCGWorkView::DrawPolyNormal(const Vec4& polyCenterVS, const Vec4& normalVS, 
 	const Mat4& projection, const Mat4& toView, COLORREF color)
 {
 	Vec4 polyCenter = polyCenterVS;
@@ -752,10 +754,10 @@ void CCGWorkView::DrawPolyNormal(CDC* pDC, const Vec4& polyCenterVS, const Vec4&
 	// Draw normal
 	CPoint polyCenterPix((int)polyCenter[0], (int)polyCenter[1]);
 	CPoint endPosPix((int)endPos[0], (int)endPos[1]);
-	DrawLine(pDC, color, polyCenterPix, endPosPix);
+	DrawLine(color, polyCenterPix, endPosPix);
 }
 
-void CCGWorkView::DrawBackground(CDC* pDC, CRect r)
+void CCGWorkView::DrawBackground()
 {
 	if (((currentPolySelection != WIREFRAME) || saveToFile) && isBGFileOpen && !isFogEnabled)
 	{
@@ -783,9 +785,9 @@ void CCGWorkView::DrawBackground(CDC* pDC, CRect r)
 					int g = GET_G(c);
 					int b = GET_B(c);
 					if (!saveToFile)
-						pDC->SetPixel(x, y, RGB(r, g, b));
+						SetPixelBuffer(x, y, RGB(r, g, b));
 					else
-						imgToSave.SetValue(x, y, SET_RGB(GET_A(RGB(r, g, b)), GET_B(RGB(r, g, b)), GET_G(RGB(r, g, b))));
+						imgToSave.SetValue(x, y, SET_RGB(GET_B(RGB(r, g, b)), GET_B(RGB(r, g, b)), GET_G(RGB(r, g, b))));
 				}
 			}
 		}
@@ -798,7 +800,7 @@ void CCGWorkView::DrawBackground(CDC* pDC, CRect r)
 					int b = GET_B(c);
 
 					if (!saveToFile)
-						pDC->SetPixel(x, y, RGB(r, g, b));
+						SetPixelBuffer(x, y, RGB(r, g, b));
 					else
 						imgToSave.SetValue(x, y, SET_RGB(GET_A(RGB(r, g, b)), GET_B(RGB(r, g, b)), GET_G(RGB(r, g, b))));
 				}
@@ -811,7 +813,9 @@ void CCGWorkView::DrawBackground(CDC* pDC, CRect r)
 			bGColorRef = RGB(fog.Color[0], fog.Color[1], fog.Color[2]);
 
 		if (!saveToFile)
-			pDC->FillSolidRect(&r, bGColorRef);
+			for (int x = 0; x < m_WindowWidth; x++)
+				for (int y = 0; y < m_WindowHeight; y++)
+					SetPixelBuffer(x, y, bGColorRef);			
 		else
 		{
 			for (int x = 0; x < imgWidth; x++)
@@ -821,7 +825,7 @@ void CCGWorkView::DrawBackground(CDC* pDC, CRect r)
 	}
 }
 
-void CCGWorkView::DrawSilhouetteEdges(CDC * pDC, Geometry* geo, const Mat4 & modelTransform,
+void CCGWorkView::DrawSilhouetteEdges(Geometry* geo, const Mat4 & modelTransform,
 	const Mat4 & camTransform, const Mat4 & projection, const Mat4 & toView, COLORREF color)
 {
 	for (PolyEdge* e : geo->Edges)
@@ -841,9 +845,27 @@ void CCGWorkView::DrawSilhouetteEdges(CDC * pDC, Geometry* geo, const Mat4 & mod
 			// Draw line
 			CPoint p1Pix((int)p1[0], (int)p1[1]);
 			CPoint p2Pix((int)p2[0], (int)p2[1]);
-			DrawLine(pDC, color, p1Pix, p2Pix, silThickness - 1); // converting thickness to be 0-2 from 1-3
+			DrawLine(color, p1Pix, p2Pix, silThickness - 1); // converting thickness to be 0-2 from 1-3
 		}
 	}
+}
+
+void CCGWorkView::SetPixelBuffer(int x, int y, COLORREF color)
+{	
+	int width = saveToFile ? imgWidth : m_WindowWidth;
+	int height = saveToFile ? imgHeight : m_WindowHeight;
+
+	if (x < 0 || x >= width || y < 0 || y >= height) return;
+
+	int yCor = (height - 1) - y;
+	int pos = x + yCor * width;
+
+	COLORREF b = GetRValue(color)<<16;
+	COLORREF g = GetGValue(color)<<8;
+	COLORREF r = GetBValue(color);
+
+	COLORREF correctedColor = b|g|r;
+	m_FrameBuffer[pos] = correctedColor;
 }
 
 int CCGWorkView::OnCreate(LPCREATESTRUCT lpCreateStruct) 
@@ -1185,10 +1207,16 @@ BOOL CCGWorkView::OnEraseBkgnd(CDC* pDC)
 	// Clear zBuffer
 	if (zBuffer != NULL)
 	{
-		delete zBuffer;
+		delete[] zBuffer;
 		zBuffer = NULL;
 	}
 	
+	if (m_FrameBuffer != NULL)
+	{
+		delete[] m_FrameBuffer;
+		m_FrameBuffer = NULL;
+	}
+
 	return true;
 }
 
@@ -1198,17 +1226,32 @@ BOOL CCGWorkView::OnEraseBkgnd(CDC* pDC)
 // CCGWorkView drawing
 /////////////////////////////////////////////////////////////////////////////
 
-void CCGWorkView::OnDraw(CDC* pDC)
+void CCGWorkView::OnPaint()
 {
-	CCGWorkDoc* pDoc = GetDocument();
-	ASSERT_VALID(pDoc);
-	if (!pDoc)
-	    return;
 	CRect r;
-
 	GetClientRect(&r);
-	CDC *pDCToUse = /*m_pDC*/m_pDbDC;
+	int width = r.Width();
+	int height = r.Height();
 
+	//frameBuffer 
+	CPaintDC hdc(this); // device context for painting
+	HDC hdcMem = CreateCompatibleDC(hdc);
+	HBITMAP bm = CreateCompatibleBitmap(hdc, width, height);
+	SelectObject(hdcMem, bm);
+
+	BITMAPINFO bminfo;
+	bminfo.bmiHeader.biSize = sizeof(bminfo.bmiHeader);
+	bminfo.bmiHeader.biWidth = width;
+	bminfo.bmiHeader.biHeight = height;
+	bminfo.bmiHeader.biPlanes = 1;
+	bminfo.bmiHeader.biBitCount = 32;
+	bminfo.bmiHeader.biCompression = BI_RGB;
+	bminfo.bmiHeader.biSizeImage = 0;
+	bminfo.bmiHeader.biXPelsPerMeter = 1;
+	bminfo.bmiHeader.biYPelsPerMeter = 1;
+	bminfo.bmiHeader.biClrUsed = 0;
+	bminfo.bmiHeader.biClrImportant = 0;
+	m_FrameBuffer = new int[width * height];
 
 	if (isFirstDraw)
 	{
@@ -1216,7 +1259,7 @@ void CCGWorkView::OnDraw(CDC* pDC)
 		m_WindowWidth = r.Width();
 		m_WindowHeight = r.Height();
 		m_AspectRatio = (double)m_WindowWidth / (double)m_WindowHeight;
-		
+
 		// Set initial Projection matricies
 		double width = orthoHeight * m_AspectRatio;
 		Scene::GetInstance().GetCamera()->SetPerspective(45.0, m_AspectRatio, 1.0, 1000.0);
@@ -1236,8 +1279,9 @@ void CCGWorkView::OnDraw(CDC* pDC)
 		zBuffer[i] = -DBL_MAX;
 
 	// Background Drawing
-	DrawBackground(pDCToUse, r);
-	
+	DrawBackground();
+
+
 	// Don't draw if model is not finished loading
 	if (isModelLoaded)
 	{
@@ -1269,11 +1313,10 @@ void CCGWorkView::OnDraw(CDC* pDC)
 				Vec4(0.0, 0.0, 1.0, 0.0),
 				Vec4((imgWidth - 1) / 2.0, (imgHeight - 1) / 2.0, 0.0, 1.0));
 		}
-
 		for (Model* model : models)
 		{
 			Mat4 transform = model->GetTransform();
-			COLORREF color = isCColorDialogOpen ? m_colorDialog.WireframeColor : 
+			COLORREF color = isCColorDialogOpen ? m_colorDialog.WireframeColor :
 				Vec4ToColor(model->GetColor());
 			COLORREF normalColor = isCColorDialogOpen ? m_colorDialog.NormalColor :
 				Vec4ToColor(model->GetNormalColor());
@@ -1364,7 +1407,7 @@ void CCGWorkView::OnDraw(CDC* pDC)
 						// Draw vertex normal if needed
 						if (Scene::GetInstance().AreVertexNormalsOn())
 						{
-							DrawVertexNormal(pDCToUse, dVertex1.PosVS, normal1VS,
+							DrawVertexNormal(dVertex1.PosVS, normal1VS,
 								projection, toView, normalColor);
 						}
 					}
@@ -1379,20 +1422,20 @@ void CCGWorkView::OnDraw(CDC* pDC)
 
 					Vec4 polyCenter = p->Center * transform * camTransform;
 					Vec4 normal = Scene::GetInstance().GetCalcNormalState() ?
-						CalculatePolyNormal(p, transform, camTransform) : 
+						CalculatePolyNormal(p, transform, camTransform) :
 						p->Normal * transform * camTransform;
 					normal *= normalSign; // Poly normal in View Space coordinates
 
 					// Draw poly in wireframe mode or fill it, according to user selection
 					if (currentPolySelection == WIREFRAME && !saveToFile)
-						DrawPoly(pDCToUse, poly);
+						DrawPoly(poly);
 					else if (currentPolySelection == SOLID_SCREEN || saveToFile)
-						ScanConvert(pDCToUse, poly, color, polyCenter, normal);
+						ScanConvert(poly, color, polyCenter, normal);
 
 					// Draw poly normal if needed
 					if (Scene::GetInstance().ArePolyNormalsOn())
 					{
-						DrawPolyNormal(pDCToUse, polyCenter, normal, 
+						DrawPolyNormal(polyCenter, normal,
 							projection, toView, normalColor);
 					}
 				}
@@ -1400,13 +1443,13 @@ void CCGWorkView::OnDraw(CDC* pDC)
 				// Draw Geo Bounding Box if needed
 				if (Scene::GetInstance().GetBBoxState() && showGeos)
 				{
-					DrawBoundingBox(pDCToUse, geo->BBox, transform, camTransform, projection, toView, color);
+					DrawBoundingBox(geo->BBox, transform, camTransform, projection, toView, color);
 				}
 
 				// Draw Silhouette Edges if needed
 				if (showSil)
 				{
-					DrawSilhouetteEdges(pDCToUse, geo, transform, camTransform, 
+					DrawSilhouetteEdges(geo, transform, camTransform,
 						projection, toView, silColor);
 				}
 			}
@@ -1415,19 +1458,19 @@ void CCGWorkView::OnDraw(CDC* pDC)
 			mouseClicked = false;
 
 			// Draw the selected polys in the end to make sure they are on top
-			DrawSelectedPolys(pDCToUse);
+			DrawSelectedPolys();
 
 			// Draw Model Bounding Box if needed
 			if (Scene::GetInstance().GetBBoxState() && !showGeos)
 			{
-				DrawBoundingBox(pDCToUse, model->GetBBox(), transform, camTransform, projection, toView, color);
+				DrawBoundingBox(model->GetBBox(), transform, camTransform, projection, toView, color);
 			}
 		}
 
 		if (saveToFile)
 		{
 			imgToSave.WritePng();
-	
+
 			if (!isPlaying)
 			{
 				AfxMessageBox(L"Rendered to file successfully", MB_OK | MB_ICONINFORMATION);
@@ -1445,11 +1488,19 @@ void CCGWorkView::OnDraw(CDC* pDC)
 		}
 	}
 
-	if (pDCToUse != m_pDC) 
-	{
-		m_pDC->BitBlt(r.left, r.top, r.Width(), r.Height(), pDCToUse, r.left, r.top, SRCCOPY);
-	}
+	SetDIBits(hdcMem, bm, 0, r.bottom - r.top, m_FrameBuffer, &bminfo, 0);
+	BitBlt(hdc, r.left, r.top, r.right, r.bottom, hdcMem, r.left, r.top, SRCCOPY);
+
+	DeleteDC(hdcMem);
+	DeleteObject(bm);
 }
+
+
+
+void CCGWorkView::OnDraw(CDC* pDC) {
+	OnPaint();
+}
+
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1686,14 +1737,6 @@ void CCGWorkView::OnUpdateAxisZ(CCmdUI* pCmdUI)
 {
 	pCmdUI->SetCheck(m_isAxis_Z);
 }
-
-
-
-
-
-// OPTIONS HANDLERS ///////////////////////////////////////////
-
-
 
 
 // LIGHT SHADING HANDLERS ///////////////////////////////////////////
