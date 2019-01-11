@@ -128,6 +128,9 @@ BEGIN_MESSAGE_MAP(CCGWorkView, CView)
 	ON_COMMAND(ID_PLAYBACKSPEED_INCREASE, &CCGWorkView::OnPlaybackspeedIncrease)
 	ON_COMMAND(ID_PLAYBACKSPEED_DECREASE, &CCGWorkView::OnPlaybackspeedDecrease)
 	ON_WM_PAINT()
+	ON_COMMAND(ID_ANTI_OPTIONS, &CCGWorkView::OnAntiOptions)
+	ON_COMMAND(ID_ANTI_ENABLED, &CCGWorkView::OnAntiEnabled)
+	ON_UPDATE_COMMAND_UI(ID_ANTI_ENABLED, &CCGWorkView::OnUpdateAntiEnabled)
 END_MESSAGE_MAP()
 
 // A patch to fix GLaux disappearance from VS2005 to VS2008
@@ -2533,4 +2536,26 @@ void CCGWorkView::OnPlaybackspeedIncrease()
 void CCGWorkView::OnPlaybackspeedDecrease()
 {
 	anim.DecreasePlaybackSpeed(25.0);
+}
+
+
+void CCGWorkView::OnAntiOptions()
+{
+	if (m_antiAliasingDialog.DoModal() == IDOK)
+	{
+		m_antiAliasing= m_antiAliasingDialog.antiAliasing;
+		Invalidate();
+	}
+}
+
+
+void CCGWorkView::OnAntiEnabled()
+{
+	m_antiAliasing.IsEnabled = !m_antiAliasing.IsEnabled;
+}
+
+
+void CCGWorkView::OnUpdateAntiEnabled(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(m_antiAliasing.IsEnabled);
 }

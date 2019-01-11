@@ -163,6 +163,7 @@
     <ClCompile Include="Animation.cpp" />
     <ClCompile Include="AntiAliasing.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CAntiAliasingDialog.cpp" />
     <ClCompile Include="CColorsDialog.cpp" />
     <ClCompile Include="CDialogSilhouette.cpp" />
     <ClCompile Include="CExportDialog.cpp" />
@@ -242,6 +243,7 @@
     <ClInclude Include="Animation.h" />
     <ClInclude Include="AntiAliasing.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CAntiAliasingDialog.h" />
     <ClInclude Include="CColorsDialog.h" />
     <ClInclude Include="CDialogSilhouette.h" />
     <ClInclude Include="CExportDialog.h" />

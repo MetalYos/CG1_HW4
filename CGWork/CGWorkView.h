@@ -32,6 +32,8 @@
 #include "PngWrapper.h"
 #include "Fog.h"
 #include "Animation.h"
+#include "CAntiAliasingDialog.h"
+#include "AntiAliasing.h"
 
 struct DVertex
 {
@@ -146,6 +148,7 @@ private:
 	//AntiAliasing 
 	typedef int* BUFFER;
 	BUFFER m_FrameBuffer;
+	AntiAliasing m_antiAliasing;
 
 	// Quick hack
 	std::vector< std::vector<Edge> > selectedPolys;
@@ -176,6 +179,7 @@ private:
 	CMaterialDlg m_materialDialog;
 	CExportDialog m_exportDialog;
 	CDialogSilhouette m_silDialog;
+	CAntiAliasingDialog m_antiAliasingDialog;
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -314,6 +318,9 @@ public:
 	afx_msg void OnPlaybackspeedIncrease();
 	afx_msg void OnPlaybackspeedDecrease();
 	afx_msg void OnPaint();
+	afx_msg void OnAntiOptions();
+	afx_msg void OnAntiEnabled();
+	afx_msg void OnUpdateAntiEnabled(CCmdUI *pCmdUI);
 };
 
 #ifndef _DEBUG  // debug version in CGWorkView.cpp

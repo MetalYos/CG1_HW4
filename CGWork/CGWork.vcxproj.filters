@@ -87,6 +87,9 @@
     <ClCompile Include="Animation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CAntiAliasingDialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Mat3.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -257,6 +260,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Animation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CAntiAliasingDialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Mat3.h">

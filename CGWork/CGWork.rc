@@ -170,6 +170,12 @@ BEGIN
             MENUITEM "Enable",                      ID_FOGEFFECT_ENABLE
             MENUITEM "Options...",                  ID_FOGEFFECT_OPTIONS
         END
+        MENUITEM SEPARATOR
+        POPUP "Anti-Aliasing"
+        BEGIN
+            MENUITEM "Enabled",                     ID_ANTI_ENABLED
+            MENUITEM "Options...",                  ID_ANTI_OPTIONS
+        END
     END
     POPUP "&Help"
     BEGIN
@@ -433,6 +439,19 @@ BEGIN
     EDITTEXT        IDC_EDIT_FOG_EXP_FACT,86,114,40,14,ES_AUTOHSCROLL
 END
 
+IDD_ANTIALIAS_DLG DIALOGEX 0, 0, 213, 107
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Anti-aliasing"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,95,86,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,151,86,50,14
+    COMBOBOX        IDC_FILTER_TYPE,35,44,48,56,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_FILTER_SIZE,127,43,48,57,CBS_DROPDOWN | CBS_SORT | WS_TABSTOP
+    LTEXT           "Filter Size",IDC_STATIC,135,27,32,8
+    LTEXT           "Filter Type",IDC_STATIC,41,27,35,8
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -563,6 +582,14 @@ BEGIN
         TOPMARGIN, 7
         BOTTOMMARGIN, 170
     END
+
+    IDD_ANTIALIAS_DLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 206
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 100
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
@@ -584,6 +611,23 @@ BEGIN
 0x6956, 0x7765, "\000" 
     IDC_LIGHT_SPACE, 0x403, 6, 0
 0x6f4c, 0x6163, 0x006c, 
+    0
+END
+
+IDD_ANTIALIAS_DLG DLGINIT
+BEGIN
+    IDC_FILTER_TYPE, 0x403, 4, 0
+0x6f42, 0x0078, 
+    IDC_FILTER_TYPE, 0x403, 9, 0
+0x7254, 0x6169, 0x676e, 0x656c, "\000" 
+    IDC_FILTER_TYPE, 0x403, 9, 0
+0x6147, 0x7375, 0x6973, 0x6e61, "\000" 
+    IDC_FILTER_TYPE, 0x403, 5, 0
+0x6953, 0x636e, "\000" 
+    IDC_FILTER_SIZE, 0x403, 4, 0
+0x5833, 0x0033, 
+    IDC_FILTER_SIZE, 0x403, 4, 0
+0x5835, 0x0035, 
     0
 END
 
@@ -639,6 +683,11 @@ BEGIN
 END
 
 IDD_DIALOG_FOG AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_ANTIALIAS_DLG AFX_DIALOG_LAYOUT
 BEGIN
     0
 END
