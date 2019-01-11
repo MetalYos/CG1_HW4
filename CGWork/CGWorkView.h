@@ -305,6 +305,9 @@ public:
 	afx_msg void OnUpdateInterpolationLinear(CCmdUI *pCmdUI);
 	afx_msg void OnInterpolationBezier();
 	afx_msg void OnUpdateInterpolationBezier(CCmdUI *pCmdUI);
+	afx_msg void OnPlaybackspeedNormal();
+	afx_msg void OnPlaybackspeedIncrease();
+	afx_msg void OnPlaybackspeedDecrease();
 };
 
 #ifndef _DEBUG  // debug version in CGWorkView.cpp

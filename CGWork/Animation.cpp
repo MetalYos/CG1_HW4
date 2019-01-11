@@ -10,6 +10,12 @@ void Animation::AddKeyFrame(Frame* keyFrame)
 	assert(keyFrame->FrameNumber > maxFrame);
 
 	keyFrames.push_back(keyFrame);
+	if (keyFrame->FrameNumber > 0)
+	{
+		Frame* prevKF = keyFrames[keyFrames.size() - 2];
+		keyFrame->OriginalFrame = prevKF->OriginalFrame + (keyFrame->FrameNumber - prevKF->FrameNumber);
+		keyFrame->FrameNumber = (int)(keyFrame->OriginalFrame * speedFactor) + keyFrames[0]->OriginalFrame;
+	}
 	maxFrame = keyFrame->FrameNumber;
 
 	if (keyFrame->FrameNumber == 0)
@@ -80,6 +86,38 @@ const Frame* Animation::GetCurrentFrame() const
 	return currentFrame;
 }
 
+void Animation::IncreasePlaybackSpeed(double percentage)
+{
+	double factor = 1.0 - percentage / 100.0;
+	for (unsigned int i = 1; i < keyFrames.size(); i++)
+	{
+		keyFrames[i]->FrameNumber = (int)(keyFrames[i]->FrameNumber * factor) + keyFrames[0]->OriginalFrame;
+	}
+	maxFrame = keyFrames[keyFrames.size() - 1]->FrameNumber;
+	speedFactor *= factor;
+}
+
+void Animation::DecreasePlaybackSpeed(double percentage)
+{
+	double factor = 1.0 + percentage / 100.0;
+	for (unsigned int i = 1; i < keyFrames.size(); i++)
+	{
+		keyFrames[i]->FrameNumber = (int)(keyFrames[i]->FrameNumber * factor) + keyFrames[0]->OriginalFrame;
+	}
+	maxFrame = keyFrames[keyFrames.size() - 1]->FrameNumber;
+	speedFactor *= factor;
+}
+
+void Animation::NormalPlaybackSpeed()
+{
+	for (Frame* keyFrame : keyFrames)
+	{
+		keyFrame->FrameNumber = keyFrame->OriginalFrame;
+	}
+	maxFrame = keyFrames[keyFrames.size() - 1]->FrameNumber;
+	speedFactor = 1.0;
+}
+
 void Animation::ClearAnimation()
 {
 	while (keyFrames.size() > 0)
@@ -90,6 +128,7 @@ void Animation::ClearAnimation()
 	}
 	currentFrame = NULL;
 	maxFrame = -1;
+	speedFactor = 1.0;
 }
 
 Frame* Animation::GetFrameLinearInterpolation2(Frame* before, Frame* after, int frame) const

@@ -138,8 +138,8 @@ BEGIN
         POPUP "Playback Speed"
         BEGIN
             MENUITEM "Normal",                      ID_PLAYBACKSPEED_NORMAL
-            MENUITEM "Increase by 10%",             ID_PLAYBACKSPEED_INCREASEBY10
-            MENUITEM "Decrease by 10%",             ID_PLAYBACKSPEED_DECREASEBY10
+            MENUITEM "Increase by 25%",             ID_PLAYBACKSPEED_INCREASE
+            MENUITEM "Decrease by 25%",             ID_PLAYBACKSPEED_DECREASE
         END
         POPUP "Interpolation"
         BEGIN

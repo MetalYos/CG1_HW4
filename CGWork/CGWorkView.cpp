@@ -124,6 +124,9 @@ BEGIN_MESSAGE_MAP(CCGWorkView, CView)
 	ON_UPDATE_COMMAND_UI(ID_INTERPOLATION_LINEAR, &CCGWorkView::OnUpdateInterpolationLinear)
 	ON_COMMAND(ID_INTERPOLATION_BEZIER, &CCGWorkView::OnInterpolationBezier)
 	ON_UPDATE_COMMAND_UI(ID_INTERPOLATION_BEZIER, &CCGWorkView::OnUpdateInterpolationBezier)
+	ON_COMMAND(ID_PLAYBACKSPEED_NORMAL, &CCGWorkView::OnPlaybackspeedNormal)
+	ON_COMMAND(ID_PLAYBACKSPEED_INCREASE, &CCGWorkView::OnPlaybackspeedIncrease)
+	ON_COMMAND(ID_PLAYBACKSPEED_DECREASE, &CCGWorkView::OnPlaybackspeedDecrease)
 END_MESSAGE_MAP()
 
 // A patch to fix GLaux disappearance from VS2005 to VS2008
@@ -1908,6 +1911,7 @@ void CCGWorkView::OnLButtonUp(UINT nFlags, CPoint point)
 			keyFrame->Scale[1] = m_isAxis_Y ? scaleFactor : 1.0;
 			keyFrame->Scale[2] = m_isAxis_Z ? scaleFactor : 1.0;
 		}
+		keyFrame->OriginalFrame = keyFrame->FrameNumber;
 
 		anim.AddKeyFrame(keyFrame);
 
@@ -2361,6 +2365,7 @@ void CCGWorkView::OnAnimationRecord()
 			keyFrame->ModelTransform = Scene::GetInstance().GetModels().back()->GetTransform();
 			keyFrame->CamTransform = Scene::GetInstance().GetCamera()->GetTranform();
 			keyFrame->FrameNumber = 0;
+			keyFrame->FrameNumber = 0;
 
 			anim.AddKeyFrame(keyFrame);
 		}
@@ -2430,4 +2435,22 @@ void CCGWorkView::OnInterpolationBezier()
 void CCGWorkView::OnUpdateInterpolationBezier(CCmdUI *pCmdUI)
 {
 	pCmdUI->SetCheck(!isLinearInterpolation);
+}
+
+
+void CCGWorkView::OnPlaybackspeedNormal()
+{
+	anim.NormalPlaybackSpeed();
+}
+
+
+void CCGWorkView::OnPlaybackspeedIncrease()
+{
+	anim.IncreasePlaybackSpeed(25.0);
+}
+
+
+void CCGWorkView::OnPlaybackspeedDecrease()
+{
+	anim.DecreasePlaybackSpeed(25.0);
 }

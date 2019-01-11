@@ -7,6 +7,7 @@ struct Frame
 	Mat4 ModelTransform;
 	Mat4 CamTransform;
 	int FrameNumber;
+	int OriginalFrame;
 
 	Vec4 Translation;
 	Vec4 Scale;
@@ -17,7 +18,7 @@ struct Frame
 	bool AroundEye;
 
 	Frame()
-		: FrameNumber(0), ObjectSpace(false), AroundEye(true)
+		: FrameNumber(0), OriginalFrame(0), ObjectSpace(false), AroundEye(true)
 	{
 		Action[0] = Action[1] = Action[2] = true;
 	}
@@ -27,7 +28,7 @@ class Animation
 {
 public:
 	Animation()
-		: maxFrame(-1), currentFrame(NULL) {}
+		: maxFrame(-1), currentFrame(NULL), speedFactor(1.0) {}
 	~Animation() { ClearAnimation(); }
 
 	void AddKeyFrame(Frame* keyFrame);
@@ -37,6 +38,10 @@ public:
 	void ResetAnimation();
 	bool StepToNextFrame(bool linearInterpolation = true);
 	const Frame* GetCurrentFrame() const;
+
+	void IncreasePlaybackSpeed(double percentage);
+	void DecreasePlaybackSpeed(double percentage);
+	void NormalPlaybackSpeed();
 
 	void ClearAnimation();
 
@@ -49,5 +54,6 @@ private:
 	std::vector<Frame*> keyFrames;
 	int maxFrame;
 	Frame* currentFrame;
+	double speedFactor;
 };
 
