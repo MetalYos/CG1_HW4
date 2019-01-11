@@ -30,3 +30,5 @@
 #include <afxcontrolbars.h>
 #include <afxcontrolbars.h>
 #include <afxcontrolbars.h>
+
+typedef int* BUFFER;

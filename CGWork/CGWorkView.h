@@ -64,6 +64,8 @@ public:
 public:
 
 private:
+	int m_Width;
+	int m_Height;
 	bool m_isAxis_X;
 	bool m_isAxis_Y;
 	bool m_isAxis_Z;
@@ -146,7 +148,6 @@ private:
 	std::string animFileName;
 
 	//AntiAliasing 
-	typedef int* BUFFER;
 	BUFFER m_FrameBuffer;
 	AntiAliasing m_antiAliasing;
 

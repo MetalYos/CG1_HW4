@@ -510,18 +510,14 @@ void CCGWorkView::ScanConvert(std::vector<Edge> poly, COLORREF color, Vec4 polyC
 				}
 				// Compare z Pos to zBuffer, if z Pos > zBuffer,
 				// Draw and update z buffer
-				int width = saveToFile ? imgWidth : m_WindowWidth;
-				int height = saveToFile ? imgHeight : m_WindowHeight;
-				int index = max(0, min(x + width * y, width * height - 1));
+
+				int index = max(0, min(x + m_Width * y, m_Width * m_Height - 1));
 				if (zp > zBuffer[index])
 				{
 					if (isFogEnabled && (m_nLightShading != ID_LIGHT_SHADING_FLAT))
 						color = GetColorWithFog(pos, color);
 
-					if (!saveToFile)
-						SetPixelBuffer(x, y, color);
-					else
-						imgToSave.SetValue(x, y, SET_RGB(GET_A(color), GET_B(color), GET_G(color)));
+					SetPixelBuffer(x, y, color);
 					zBuffer[index] = zp;
 				}
 				x++;
@@ -575,10 +571,7 @@ void CCGWorkView::DrawPointOctant(int x, int y, COLORREF color, const CPoint& or
 	CPoint actualPoint = origA + transformed;
 
 	if (thickness == 0)
-		if (!saveToFile)
-			SetPixelBuffer(actualPoint.x, actualPoint.y, color);
-		else
-			imgToSave.SetValue(actualPoint.x, actualPoint.y, SET_RGB(GET_A(color), GET_B(color), GET_G(color)));
+		SetPixelBuffer(actualPoint.x, actualPoint.y, color);
 	else
 	{
 		// Draw thickness
@@ -590,11 +583,11 @@ void CCGWorkView::DrawPointOctant(int x, int y, COLORREF color, const CPoint& or
 		{
 			if ((startX == actualPoint.x) && (actualPoint.x - i >= 0))
 				startX = actualPoint.x - i;
-			if ((endX == actualPoint.x) && (actualPoint.x + i < m_WindowWidth))
+			if ((endX == actualPoint.x) && (actualPoint.x + i < m_Width))
 				endX = actualPoint.x + i;
 			if ((startY == actualPoint.y) && (actualPoint.y - i >= 0))
 				startY = actualPoint.y - i;
-			if ((endY == actualPoint.y) && (actualPoint.y + i < m_WindowHeight))
+			if ((endY == actualPoint.y) && (actualPoint.y + i < m_Height))
 				endY = actualPoint.y + i;
 		}
 
@@ -603,10 +596,7 @@ void CCGWorkView::DrawPointOctant(int x, int y, COLORREF color, const CPoint& or
 		{
 			for (int y = startY; y <= endY; y++)
 			{
-				if (!saveToFile)
-					SetPixelBuffer(x, y, color);
-				else
-					imgToSave.SetValue(x, y, SET_RGB(GET_A(color), GET_B(color), GET_G(color)));
+				SetPixelBuffer(x, y, color);
 			}
 		}
 	}
@@ -768,16 +758,13 @@ void CCGWorkView::DrawBackground()
 		PngWrapper pngReadFile(BG);
 		pngReadFile.ReadPng();
 
-		int width = saveToFile ? imgWidth : m_WindowWidth;
-		int height = saveToFile ? imgHeight : m_WindowHeight;
-
 		if (isBGStretch) {
 			// Scale factors
-			double cx = (double)width / (double)pngReadFile.GetWidth();
-			double cy = (double)height / (double)pngReadFile.GetHeight();
+			double cx = (double)m_Width / (double)pngReadFile.GetWidth();
+			double cy = (double)m_Height / (double)pngReadFile.GetHeight();
 
-			for (int x = 0; x < width; x++) {
-				for (int y = 0; y < height; y++) {
+			for (int x = 0; x < m_Width; x++) {
+				for (int y = 0; y < m_Height; y++) {
 					// Calculate position in image
 					double v = x / cx;
 					double w = y / cy;
@@ -787,25 +774,19 @@ void CCGWorkView::DrawBackground()
 					int r = GET_R(c);
 					int g = GET_G(c);
 					int b = GET_B(c);
-					if (!saveToFile)
-						SetPixelBuffer(x, y, RGB(r, g, b));
-					else
-						imgToSave.SetValue(x, y, SET_RGB(GET_B(RGB(r, g, b)), GET_B(RGB(r, g, b)), GET_G(RGB(r, g, b))));
+					SetPixelBuffer(x, y, RGB(r, g, b));
 				}
 			}
 		}
 		else {
-			for (int x = 0; x < width; x++) {
-				for (int y = 0; y < height; y++) {
+			for (int x = 0; x < m_Width; x++) {
+				for (int y = 0; y < m_Height; y++) {
 					int c = pngReadFile.GetValue(x % pngReadFile.GetWidth(), y % pngReadFile.GetHeight());
 					int r = GET_R(c);
 					int g = GET_G(c);
 					int b = GET_B(c);
 
-					if (!saveToFile)
-						SetPixelBuffer(x, y, RGB(r, g, b));
-					else
-						imgToSave.SetValue(x, y, SET_RGB(GET_A(RGB(r, g, b)), GET_B(RGB(r, g, b)), GET_G(RGB(r, g, b))));
+					SetPixelBuffer(x, y, RGB(r, g, b));
 				}
 			}
 		}
@@ -815,16 +796,10 @@ void CCGWorkView::DrawBackground()
 		if ((isFogEnabled && currentPolySelection != WIREFRAME) || (isFogEnabled && saveToFile))
 			bGColorRef = RGB(fog.Color[0], fog.Color[1], fog.Color[2]);
 
-		if (!saveToFile)
-			for (int x = 0; x < m_WindowWidth; x++)
-				for (int y = 0; y < m_WindowHeight; y++)
-					SetPixelBuffer(x, y, bGColorRef);			
-		else
-		{
-			for (int x = 0; x < imgWidth; x++)
-				for (int y = 0; y < imgHeight; y++)
-					imgToSave.SetValue(x, y, SET_RGB(GET_A(bGColorRef), GET_B(bGColorRef), GET_G(bGColorRef)));
-		}
+		for (int x = 0; x < m_Width; x++)
+			for (int y = 0; y < m_Height; y++)
+				SetPixelBuffer(x, y, bGColorRef);			
+		
 	}
 }
 
@@ -855,13 +830,10 @@ void CCGWorkView::DrawSilhouetteEdges(Geometry* geo, const Mat4 & modelTransform
 
 void CCGWorkView::SetPixelBuffer(int x, int y, COLORREF color)
 {	
-	int width = saveToFile ? imgWidth : m_WindowWidth;
-	int height = saveToFile ? imgHeight : m_WindowHeight;
+	if (x < 0 || x >= m_Width || y < 0 || y >= m_Height) return;
 
-	if (x < 0 || x >= width || y < 0 || y >= height) return;
-
-	int yCor = (height - 1) - y;
-	int pos = x + yCor * width;
+	int yCor = (m_Height - 1) - y;
+	int pos = x + yCor * m_Width;
 
 	COLORREF b = GetRValue(color)<<16;
 	COLORREF g = GetGValue(color)<<8;
@@ -1233,40 +1205,33 @@ void CCGWorkView::OnPaint()
 {
 	CRect r;
 	GetClientRect(&r);
-	int width = r.Width();
-	int height = r.Height();
+	m_Width = (saveToFile) ? imgWidth : r.Width();
+	m_Height = (saveToFile) ? imgHeight : r.Height();
+	double aspectRatio = (double)m_Width / (double)m_Height;
+
+	int aaSizeFactor = 1;
+	if (m_antiAliasing.IsEnabled && (m_antiAliasing.Size == AA_3X3))
+		aaSizeFactor = 3;
+	if (m_antiAliasing.IsEnabled && (m_antiAliasing.Size == AA_5X5))
+		aaSizeFactor = 5;
+
+	m_Width *= aaSizeFactor;
+	m_Height *= aaSizeFactor;
 
 	//frameBuffer 
 	CPaintDC hdc(this); // device context for painting
 	HDC hdcMem = CreateCompatibleDC(hdc);
-	HBITMAP bm = CreateCompatibleBitmap(hdc, width, height);
+	HBITMAP bm = CreateCompatibleBitmap(hdc, m_Width, m_Height);
 	SelectObject(hdcMem, bm);
 
-	BITMAPINFO bminfo;
-	bminfo.bmiHeader.biSize = sizeof(bminfo.bmiHeader);
-	bminfo.bmiHeader.biWidth = width;
-	bminfo.bmiHeader.biHeight = height;
-	bminfo.bmiHeader.biPlanes = 1;
-	bminfo.bmiHeader.biBitCount = 32;
-	bminfo.bmiHeader.biCompression = BI_RGB;
-	bminfo.bmiHeader.biSizeImage = 0;
-	bminfo.bmiHeader.biXPelsPerMeter = 1;
-	bminfo.bmiHeader.biYPelsPerMeter = 1;
-	bminfo.bmiHeader.biClrUsed = 0;
-	bminfo.bmiHeader.biClrImportant = 0;
-	m_FrameBuffer = new int[width * height];
+	m_FrameBuffer = new int[m_Width * m_Height];
 
 	if (isFirstDraw)
 	{
-		// Get Viewport parameters
-		m_WindowWidth = r.Width();
-		m_WindowHeight = r.Height();
-		m_AspectRatio = (double)m_WindowWidth / (double)m_WindowHeight;
-
 		// Set initial Projection matricies
-		double width = orthoHeight * m_AspectRatio;
-		Scene::GetInstance().GetCamera()->SetPerspective(45.0, m_AspectRatio, 1.0, 1000.0);
-		Scene::GetInstance().GetCamera()->SetOrthographic(orthoHeight, m_AspectRatio, 1, 1000.0);
+		double width = orthoHeight * aspectRatio;
+		Scene::GetInstance().GetCamera()->SetPerspective(45.0, aspectRatio, 1.0, 1000.0);
+		Scene::GetInstance().GetCamera()->SetOrthographic(orthoHeight, aspectRatio, 1, 1000.0);
 
 		// Set Perspective dialog default values
 		m_perspDialog.ProjPlane = Scene::GetInstance().GetCamera()->GetPerspectiveParameters().Near;
@@ -1276,7 +1241,7 @@ void CCGWorkView::OnPaint()
 	}
 
 	// Initialize zBuffer
-	int bufferSize = (saveToFile) ? (imgWidth * imgHeight) : (m_WindowWidth * m_WindowHeight);
+	int bufferSize = m_Width * m_Height;
 	zBuffer = new double[bufferSize];
 	for (int i = 0; i < bufferSize; i++)
 		zBuffer[i] = -DBL_MAX;
@@ -1284,38 +1249,28 @@ void CCGWorkView::OnPaint()
 	// Background Drawing
 	DrawBackground();
 
-
 	// Don't draw if model is not finished loading
 	if (isModelLoaded)
 	{
 		std::vector<Model*> models = Scene::GetInstance().GetModels();
 		Camera* camera = Scene::GetInstance().GetCamera();
 		Mat4 camTransform = camera->GetTranform();
-		Mat4 projection = camera->GetProjection();
-		Mat4 toView(Vec4(m_WindowWidth / 2.0, 0.0, 0.0, 0.0),
-			Vec4(0.0, m_WindowHeight / 2.0, 0.0, 0.0),
-			Vec4(0.0, 0.0, 1.0, 0.0),
-			Vec4((m_WindowWidth - 1) / 2.0, (m_WindowHeight - 1) / 2.0, 0.0, 1.0));
+		Mat4 toView(Vec4(m_Width / 2.0, 0.0, 0.0, 0.0),
+					Vec4(0.0, m_Height / 2.0, 0.0, 0.0),
+					Vec4(0.0, 0.0, 1.0, 0.0),
+					Vec4((m_Width - 1) / 2.0, (m_Height - 1) / 2.0, 0.0, 1.0));
 
-		PerspectiveParams pParams = camera->GetPerspectiveParameters();
+		// Update camera projections
+		bool isPerspective = camera->IsPerspective();
 		OrthographicParams oParams = camera->GetOrthographicParameters();
-		if (saveToFile)
-		{
-			double imgAspectRatio = (double)imgWidth / (double)imgHeight;
-			if (m_bIsPerspective)
-				camera->SetPerspective2(pParams.FOV, imgAspectRatio, pParams.Near, pParams.Far);
-			else
-			{
-				double width = orthoHeight * imgAspectRatio;
-				camera->SetOrthographic(orthoHeight, imgAspectRatio, oParams.Near, oParams.Far);
-			}
+		PerspectiveParams pParams = camera->GetPerspectiveParameters();
+		camera->SetPerspective2(pParams.FOV, aspectRatio, pParams.Near, pParams.Far);
+		double orthoWidth = aspectRatio * orthoHeight;
+		camera->SetOrthographic(-orthoWidth / 2.0,
+			orthoWidth / 2.0, orthoHeight / 2.0, -orthoHeight / 2.0, oParams.Near, oParams.Far);
+		camera->SwitchProjection(isPerspective);
+		Mat4 projection = camera->GetProjection();
 
-			projection = camera->GetProjection();
-			toView = Mat4(Vec4(imgWidth / 2.0, 0.0, 0.0, 0.0),
-				Vec4(0.0, imgHeight / 2.0, 0.0, 0.0),
-				Vec4(0.0, 0.0, 1.0, 0.0),
-				Vec4((imgWidth - 1) / 2.0, (imgHeight - 1) / 2.0, 0.0, 1.0));
-		}
 		for (Model* model : models)
 		{
 			Mat4 transform = model->GetTransform();
@@ -1469,30 +1424,50 @@ void CCGWorkView::OnPaint()
 				DrawBoundingBox(model->GetBBox(), transform, camTransform, projection, toView, color);
 			}
 		}
-
-		if (saveToFile)
-		{
-			imgToSave.WritePng();
-
-			if (!isPlaying)
-			{
-				AfxMessageBox(L"Rendered to file successfully", MB_OK | MB_ICONINFORMATION);
-				saveToFile = false;
-			}
-
-			// Restore original projection
-			if (m_bIsPerspective)
-				camera->SetPerspective2(pParams.FOV, m_AspectRatio, pParams.Near, pParams.Far);
-			else
-			{
-				double width = orthoHeight * m_AspectRatio;
-				camera->SetOrthographic(orthoHeight, m_AspectRatio, oParams.Near, oParams.Far);
-			}
-		}
 	}
 
-	SetDIBits(hdcMem, bm, 0, r.bottom - r.top, m_FrameBuffer, &bminfo, 0);
-	BitBlt(hdc, r.left, r.top, r.right, r.bottom, hdcMem, r.left, r.top, SRCCOPY);
+	int width = (saveToFile) ? imgWidth : m_WindowWidth;
+	int height = (saveToFile) ? imgHeight : m_WindowHeight;
+	
+	//Anti-Aliasing
+	m_FrameBuffer = m_antiAliasing.PrepareForPrint(m_FrameBuffer, width, height);
+
+	if (saveToFile)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			for (int y = 0; y < height; y++)
+			{
+				int index = x + width * y;
+				imgToSave.SetValue(GET_G(m_FrameBuffer[index]), GET_B(m_FrameBuffer[index]), GET_A(m_FrameBuffer[index]));
+			}
+		}
+		imgToSave.WritePng();
+
+		if (!isPlaying)
+		{
+			AfxMessageBox(L"Rendered to file successfully", MB_OK | MB_ICONINFORMATION);
+			saveToFile = false;
+		}
+	}
+	else
+	{
+		BITMAPINFO bminfo;
+		bminfo.bmiHeader.biSize = sizeof(bminfo.bmiHeader);
+		bminfo.bmiHeader.biWidth = width;
+		bminfo.bmiHeader.biHeight = height;
+		bminfo.bmiHeader.biPlanes = 1;
+		bminfo.bmiHeader.biBitCount = 32;
+		bminfo.bmiHeader.biCompression = BI_RGB;
+		bminfo.bmiHeader.biSizeImage = 0;
+		bminfo.bmiHeader.biXPelsPerMeter = 1;
+		bminfo.bmiHeader.biYPelsPerMeter = 1;
+		bminfo.bmiHeader.biClrUsed = 0;
+		bminfo.bmiHeader.biClrImportant = 0;
+
+		SetDIBits(hdcMem, bm, 0, r.bottom - r.top, m_FrameBuffer, &bminfo, 0);
+		BitBlt(hdc, r.left, r.top, r.right, r.bottom, hdcMem, r.left, r.top, SRCCOPY);
+	}
 
 	DeleteDC(hdcMem);
 	DeleteObject(bm);
@@ -2255,6 +2230,8 @@ void CCGWorkView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		isRecording = !isRecording;
 		AddFirstFrame();
 	}
+	if (nChar == 0x41) // A key
+		m_antiAliasing.IsEnabled = !m_antiAliasing.IsEnabled;
 
 	CView::OnKeyDown(nChar, nRepCnt, nFlags);
 	Invalidate();
@@ -2308,6 +2285,7 @@ void CCGWorkView::OnRenderingSolidtofile()
 
 		saveToFile = true;
 		Invalidate();
+		// TODO: remove invalidate and save from framebuffer
  	}
 }
 
@@ -2543,7 +2521,8 @@ void CCGWorkView::OnAntiOptions()
 {
 	if (m_antiAliasingDialog.DoModal() == IDOK)
 	{
-		m_antiAliasing= m_antiAliasingDialog.antiAliasing;
+		m_antiAliasing.Type = m_antiAliasingDialog.antiAliasing.Type;
+		m_antiAliasing.Size = m_antiAliasingDialog.antiAliasing.Size;
 		Invalidate();
 	}
 }
@@ -2552,6 +2531,7 @@ void CCGWorkView::OnAntiOptions()
 void CCGWorkView::OnAntiEnabled()
 {
 	m_antiAliasing.IsEnabled = !m_antiAliasing.IsEnabled;
+	Invalidate();
 }
 
 
