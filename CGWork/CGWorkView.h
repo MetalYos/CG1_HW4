@@ -206,6 +206,7 @@ protected:
 	COLORREF GetColorWithFog(const Vec4& posVS, COLORREF objColor);
 	void WriteToStatusBar(const CString& str);
 	COLORREF Vec4ToColor(const Vec4& c) const;
+	void AddFirstFrame();
 	virtual void RenderScene();
 
 

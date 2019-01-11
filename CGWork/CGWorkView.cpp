@@ -1158,6 +1158,25 @@ COLORREF CCGWorkView::Vec4ToColor(const Vec4 & c) const
 	return RGB((int)c[0], (int)c[1], (int)c[2]);
 }
 
+void CCGWorkView::AddFirstFrame()
+{
+	if (isRecording)
+	{
+		anim.ClearAnimation();
+		if (anim.GetFrame(0) == NULL)
+		{
+			// Add key frame
+			Frame* keyFrame = new Frame();
+			keyFrame->ModelTransform = Scene::GetInstance().GetModels().back()->GetTransform();
+			keyFrame->CamTransform = Scene::GetInstance().GetCamera()->GetTranform();
+			keyFrame->FrameNumber = 0;
+			keyFrame->FrameNumber = 0;
+
+			anim.AddKeyFrame(keyFrame);
+		}
+	}
+}
+
 BOOL CCGWorkView::OnEraseBkgnd(CDC* pDC) 
 {
 	// Windows will clear the window with the background color every time your window 
@@ -1504,6 +1523,9 @@ void CCGWorkView::OnFileLoad()
 		}
 		double zPos = abs(radius / f) * offset;
 		camera->LookAt(bboxCenter - Vec4(0.0, 0.0, zPos), bboxCenter, Vec4(0.0, 1.0, 0.0));
+		std::stringstream ss;
+		ss << "Moved camera back by " << abs(zPos);
+		WriteToStatusBar(ss.str().c_str());
 
 		// Set Perspective projection
 #ifdef D_PERSP
@@ -2162,6 +2184,31 @@ void CCGWorkView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		m_nLightShading = ID_LIGHT_SHADING_PHONG;
 	if (nChar == 0x46) // F key
 		isFogEnabled = !isFogEnabled;
+	if (nChar == VK_OEM_PLUS) // + key  
+	{
+		anim.ResetAnimation();
+		anim.IncreasePlaybackSpeed(25.0);
+	}
+	if (nChar == VK_OEM_MINUS) // - Key 
+	{
+		anim.ResetAnimation();
+		anim.DecreasePlaybackSpeed(25.0);
+	}
+
+	if (nChar == 0x50) // P key
+	{
+		if (anim.GetFrame(0) != NULL)
+		{
+			isPlaying = !isPlaying;
+			if (!isPlaying)
+				anim.ResetAnimation();
+		}
+	}
+	if (nChar == 0x52) // R key
+	{
+		isRecording = !isRecording;
+		AddFirstFrame();
+	}
 
 	CView::OnKeyDown(nChar, nRepCnt, nFlags);
 	Invalidate();
@@ -2356,20 +2403,7 @@ void CCGWorkView::OnAnimationRecord()
 
 	isRecording = !isRecording;
 
-	if (isRecording)
-	{
-		if (anim.GetFrame(0) == NULL)
-		{
-			// Add key frame
-			Frame* keyFrame = new Frame();
-			keyFrame->ModelTransform = Scene::GetInstance().GetModels().back()->GetTransform();
-			keyFrame->CamTransform = Scene::GetInstance().GetCamera()->GetTranform();
-			keyFrame->FrameNumber = 0;
-			keyFrame->FrameNumber = 0;
-
-			anim.AddKeyFrame(keyFrame);
-		}
-	}
+	AddFirstFrame();
 }
 
 
@@ -2381,8 +2415,11 @@ void CCGWorkView::OnUpdateAnimationRecord(CCmdUI *pCmdUI)
 
 void CCGWorkView::OnAnimationPlay()
 {
-	isPlaying = !isPlaying;
-	Invalidate();
+	if (anim.GetFrame(0) != NULL)
+	{
+		isPlaying = !isPlaying;
+		Invalidate();
+	}
 }
 
 
