@@ -161,6 +161,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Animation.cpp" />
+    <ClCompile Include="AntiAliasing.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CColorsDialog.cpp" />
     <ClCompile Include="CDialogSilhouette.cpp" />
@@ -239,6 +240,7 @@
   <ItemGroup>
     <ClInclude Include="ALMath.h" />
     <ClInclude Include="Animation.h" />
+    <ClInclude Include="AntiAliasing.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CColorsDialog.h" />
     <ClInclude Include="CDialogSilhouette.h" />
