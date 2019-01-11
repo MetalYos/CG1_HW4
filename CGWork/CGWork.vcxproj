@@ -212,7 +212,9 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
     </ClCompile>
+    <ClCompile Include="Mat3.cpp" />
     <ClCompile Include="Mat4.cpp" />
+    <ClCompile Include="Mat5.cpp" />
     <ClCompile Include="MaterialDlg.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="PngWrapper.cpp" />
@@ -254,7 +256,9 @@
     <ClInclude Include="Light.h" />
     <ClInclude Include="LightDialog.h" />
     <ClInclude Include="MainFrm.h" />
+    <ClInclude Include="Mat3.h" />
     <ClInclude Include="Mat4.h" />
+    <ClInclude Include="Mat5.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="MaterialDlg.h" />
     <ClInclude Include="Model.h" />

@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Vec4.h"
+#include "Mat3.h"
 #include "Mat4.h"
+#include "Mat5.h"
 #include <vector>
 
 #define AL_DBL_EPSILON 0.00000001
