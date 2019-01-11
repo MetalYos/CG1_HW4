@@ -1438,8 +1438,18 @@ void CCGWorkView::OnPaint()
 		{
 			for (int y = 0; y < height; y++)
 			{
-				int index = x + width * y;
-				imgToSave.SetValue(GET_G(m_FrameBuffer[index]), GET_B(m_FrameBuffer[index]), GET_A(m_FrameBuffer[index]));
+				int yCor = (height - 1) - y;
+				int index = x + width * yCor;
+
+				COLORREF color = m_FrameBuffer[index];
+
+				COLORREF b = GetRValue(color) << 8;
+				COLORREF g = GetGValue(color) << 16;
+				COLORREF r = GetBValue(color) << 24;
+
+				COLORREF correctedColor = b | g | r;
+
+				imgToSave.SetValue(x, y, correctedColor);
 			}
 		}
 		imgToSave.WritePng();
@@ -2285,7 +2295,6 @@ void CCGWorkView::OnRenderingSolidtofile()
 
 		saveToFile = true;
 		Invalidate();
-		// TODO: remove invalidate and save from framebuffer
  	}
 }
 
