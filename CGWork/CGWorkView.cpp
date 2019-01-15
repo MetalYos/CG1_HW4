@@ -131,6 +131,8 @@ BEGIN_MESSAGE_MAP(CCGWorkView, CView)
 	ON_COMMAND(ID_ANTI_OPTIONS, &CCGWorkView::OnAntiOptions)
 	ON_COMMAND(ID_ANTI_ENABLED, &CCGWorkView::OnAntiEnabled)
 	ON_UPDATE_COMMAND_UI(ID_ANTI_ENABLED, &CCGWorkView::OnUpdateAntiEnabled)
+	ON_COMMAND(ID_FOGEFFECT_PORTAL, &CCGWorkView::OnFogeffectPortal)
+	ON_UPDATE_COMMAND_UI(ID_FOGEFFECT_PORTAL, &CCGWorkView::OnUpdateFogeffectPortal)
 END_MESSAGE_MAP()
 
 // A patch to fix GLaux disappearance from VS2005 to VS2008
@@ -169,7 +171,8 @@ CCGWorkView::CCGWorkView()
 	m_pDbBitMap = NULL;
 	m_pDbDC = NULL;
 
-	// Init zBuffer
+	// Init Buffers
+	m_FrameBuffer = NULL;
 	zBuffer = NULL;
 
 	isFirstDraw = true;
@@ -192,7 +195,6 @@ CCGWorkView::CCGWorkView()
 	silColor = AL_YELLO_CREF;
 	normalSign = 1.0;
 	saveToFile = false;
-	isFogEnabled = false;
 	
 	// Animation parameters
 	isRecording = false;
@@ -200,9 +202,6 @@ CCGWorkView::CCGWorkView()
 	isLinearInterpolation = true;
 	framesPerSeconds = 30;
 	scaleFactor = 1.0;
-
-	//AntiAliasing
-	m_FrameBuffer = NULL;
 }
 
 CCGWorkView::~CCGWorkView()
@@ -341,7 +340,7 @@ void CCGWorkView::ScanConvert(std::vector<Edge> poly, COLORREF color, Vec4 polyC
 		Vec4 c = CalculateShading(m_lights, m, polyCenter, polyNormal, objectColor);
 		color = RGB((int)(c[0] * 255.0), (int)(c[1] * 255.0), (int)(c[2] * 255.0));
 
-		if (isFogEnabled)
+		if (fog.IsEnabled)
 			color = GetColorWithFog(polyCenter, color);
 	}
 
@@ -514,7 +513,7 @@ void CCGWorkView::ScanConvert(std::vector<Edge> poly, COLORREF color, Vec4 polyC
 				int index = max(0, min(x + m_Width * y, m_Width * m_Height - 1));
 				if (zp > zBuffer[index])
 				{
-					if (isFogEnabled && (m_nLightShading != ID_LIGHT_SHADING_FLAT))
+					if (fog.IsEnabled && (m_nLightShading != ID_LIGHT_SHADING_FLAT))
 						color = GetColorWithFog(pos, color);
 
 					SetPixelBuffer(x, y, color);
@@ -752,7 +751,7 @@ void CCGWorkView::DrawPolyNormal(const Vec4& polyCenterVS, const Vec4& normalVS,
 
 void CCGWorkView::DrawBackground()
 {
-	if (((currentPolySelection != WIREFRAME) || saveToFile) && isBGFileOpen && !isFogEnabled)
+	if (((currentPolySelection != WIREFRAME) || saveToFile) && isBGFileOpen && !fog.IsEnabled)
 	{
 		CT2A BG(BGFile);
 		PngWrapper pngReadFile(BG);
@@ -793,7 +792,7 @@ void CCGWorkView::DrawBackground()
 	}
 	else {
 		COLORREF bGColorRef = m_colorDialog.BackgroundColor;
-		if ((isFogEnabled && currentPolySelection != WIREFRAME) || (isFogEnabled && saveToFile))
+		if ((fog.IsEnabled && currentPolySelection != WIREFRAME) || (fog.IsEnabled && saveToFile))
 			bGColorRef = RGB(fog.Color[0], fog.Color[1], fog.Color[2]);
 
 		for (int x = 0; x < m_Width; x++)
@@ -1118,7 +1117,11 @@ COLORREF CCGWorkView::GetColorWithFog(const Vec4& posVS, COLORREF objColor)
 		else if ((dist < fog.MaxFogDistance) && (dist > fog.MinFogDistance))
 		{
 			factor = 1.0 - ((fog.MaxFogDistance - dist) / (fog.MaxFogDistance - fog.MinFogDistance));
-			factor = ClampDbl(factor, 0.0, 1.0);
+
+			if (fog.IsPortal)
+				factor = (factor <= fog.PortalThreshold) ? 0.0 : ClampDbl(factor, fog.PortalThreshold, 1.0);
+			else
+				factor = ClampDbl(factor, 0.0, 1.0);
 		}
 		else
 			factor = 1.0;
@@ -2214,7 +2217,7 @@ void CCGWorkView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	if (nChar == 0x33) // 3 key
 		m_nLightShading = ID_LIGHT_SHADING_PHONG;
 	if (nChar == 0x46) // F key
-		isFogEnabled = !isFogEnabled;
+		fog.IsEnabled = !fog.IsEnabled;
 	if (nChar == VK_OEM_PLUS) // + key  
 	{
 		anim.ResetAnimation();
@@ -2403,14 +2406,14 @@ void CCGWorkView::OnBackgroundClear()
 
 void CCGWorkView::OnFogeffectEnable()
 {
-	isFogEnabled = !isFogEnabled;
+	fog.IsEnabled = !fog.IsEnabled;
 	Invalidate();
 }
 
 
 void CCGWorkView::OnUpdateFogeffectEnable(CCmdUI *pCmdUI)
 {
-	pCmdUI->SetCheck(isFogEnabled);
+	pCmdUI->SetCheck(fog.IsEnabled);
 }
 
 
@@ -2424,8 +2427,22 @@ void CCGWorkView::OnFogeffectOptions()
 		fog = dlg.GetDialogData();
 	}
 
-	if (isFogEnabled)
+	if (fog.IsEnabled)
 		Invalidate();
+}
+
+
+void CCGWorkView::OnFogeffectPortal()
+{
+	fog.IsPortal = !fog.IsPortal;
+	if (fog.IsEnabled)
+		Invalidate();
+}
+
+
+void CCGWorkView::OnUpdateFogeffectPortal(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(fog.IsPortal);
 }
 
 

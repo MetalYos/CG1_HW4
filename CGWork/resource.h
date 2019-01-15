@@ -157,13 +157,14 @@
 #define ID_ANTI_ENABLED                 32855
 #define ID_ANTI_OPTIONS                 32856
 #define ID_ANTI_OPTIONS32857            32857
+#define ID_FOGEFFECT_PORTAL             32858
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        158
-#define _APS_NEXT_COMMAND_VALUE         32858
+#define _APS_NEXT_COMMAND_VALUE         32859
 #define _APS_NEXT_CONTROL_VALUE         1072
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

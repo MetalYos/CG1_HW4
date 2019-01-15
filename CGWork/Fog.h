@@ -9,15 +9,19 @@ enum FogBlendingFunction
 
 struct FogParams
 {
+	bool IsEnabled;
 	int Color[3];
 	double MinFogDistance;
 	double MaxFogDistance;
 	FogBlendingFunction BlendingFunction;
 	double Exponent;
+	bool IsPortal;
+	double PortalThreshold;
 
 	FogParams()
-		: MinFogDistance(10.0), MaxFogDistance(30.0),
-		BlendingFunction(FOG_BLENDING_LINEAR), Exponent(0.33)
+		: IsEnabled(false), MinFogDistance(10.0), MaxFogDistance(30.0),
+		BlendingFunction(FOG_BLENDING_LINEAR), Exponent(0.33),
+		IsPortal(false), PortalThreshold(0.5)
 	{
 		Color[0] = 100;
 		Color[1] = 100;

@@ -134,7 +134,6 @@ private:
 
 	// Fog
 	FogParams fog;
-	bool isFogEnabled;
 
 	// Animation parameters
 	Animation anim;
@@ -322,6 +321,8 @@ public:
 	afx_msg void OnAntiOptions();
 	afx_msg void OnAntiEnabled();
 	afx_msg void OnUpdateAntiEnabled(CCmdUI *pCmdUI);
+	afx_msg void OnFogeffectPortal();
+	afx_msg void OnUpdateFogeffectPortal(CCmdUI *pCmdUI);
 };
 
 #ifndef _DEBUG  // debug version in CGWorkView.cpp

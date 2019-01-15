@@ -169,6 +169,7 @@ BEGIN
         BEGIN
             MENUITEM "Enable",                      ID_FOGEFFECT_ENABLE
             MENUITEM "Options...",                  ID_FOGEFFECT_OPTIONS
+            MENUITEM "Portal",                      ID_FOGEFFECT_PORTAL
         END
         MENUITEM SEPARATOR
         POPUP "Anti-Aliasing"
