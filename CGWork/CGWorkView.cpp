@@ -201,7 +201,9 @@ CCGWorkView::CCGWorkView()
 	isPlaying = false;
 	isLinearInterpolation = true;
 	framesPerSeconds = 30;
-	scaleFactor = 1.0;
+	translationOffset = Vec4(0.0);
+	rotationOffset = Vec4(0.0);
+	scaleOffset = Vec4(1.0);
 }
 
 CCGWorkView::~CCGWorkView()
@@ -1554,6 +1556,10 @@ void CCGWorkView::OnFileLoad()
 		Vec4 bboxDim = model->GetBBoxDimensions();
 		double maxDim = max(max(bboxDim[0], bboxDim[1]), bboxDim[2]);
 
+		std::stringstream ss;
+		ss << "Bounding Box Dimensions: " << bboxDim;
+		WriteToStatusBar(ss.str().c_str());
+
 		// Set Camera position
 		double radius = maxDim / 2.0;
 		double f = sin(ToRadians(camera->GetPerspectiveParameters().FOV / 2.0));
@@ -1565,9 +1571,6 @@ void CCGWorkView::OnFileLoad()
 		}
 		double zPos = abs(radius / f) * offset;
 		camera->LookAt(bboxCenter - Vec4(0.0, 0.0, zPos), bboxCenter, Vec4(0.0, 1.0, 0.0));
-		std::stringstream ss;
-		ss << "Moved camera back by " << abs(zPos);
-		WriteToStatusBar(ss.str().c_str());
 
 		// Set Perspective projection
 #ifdef D_PERSP
@@ -1833,7 +1836,6 @@ void CCGWorkView::OnTimer(UINT_PTR nIDEvent)
 void CCGWorkView::OnLButtonDown(UINT nFlags, CPoint point)
 {
 	prevMousePos = point;
-	m_MouseClickPos = point;
 
 	if (m_nAction == ID_ACTION_SELECT && Scene::GetInstance().GetModels().size() > 0)
 	{
@@ -1845,7 +1847,9 @@ void CCGWorkView::OnLButtonDown(UINT nFlags, CPoint point)
 	if (isRecording)
 	{
 		m_MouseDownTicks = clock();
-		scaleFactor = 1.0;
+		translationOffset = Vec4(0.0);
+		rotationOffset = Vec4(0.0);
+		scaleOffset = Vec4(1.0);
 	}
 
 	CView::OnLButtonDown(nFlags, point);
@@ -1867,51 +1871,63 @@ void CCGWorkView::OnMouseMove(UINT nFlags, CPoint point)
 
 		if (m_nAction == ID_ACTION_TRANSLATE)
 		{
-			double x_trans = m_isAxis_X ? dx / m_sensitivity[0] : 0.0;
-			double y_trans = m_isAxis_Y ? dx / m_sensitivity[0] : 0.0;
-			double z_trans = m_isAxis_Z ? dx / m_sensitivity[0] : 0.0;
+			Vec4 trans;
+			trans[0] = m_isAxis_X ? dx / m_sensitivity[0] : 0.0;
+			trans[1] = m_isAxis_Y ? -dx / m_sensitivity[0] : 0.0;
+			trans[2] = m_isAxis_Z ? dx / m_sensitivity[0] : 0.0;
 
-			if (m_nCoordSpace == ID_BUTTON_OBJECT) 
-				model->Translate(Mat4::Translate(x_trans, y_trans, z_trans));
+			if (m_nCoordSpace == ID_BUTTON_OBJECT)
+			{
+				model->Translate(Mat4::Translate(trans));
+			}
 			else
-				camera->Translate(Mat4::Translate(x_trans, y_trans, z_trans));
+			{
+				trans[0] = -trans[0];
+				trans[2] = -trans[2];
+				camera->Translate(Mat4::Translate(trans));
+			}
+			translationOffset += trans;
 		}
 		else if (m_nAction == ID_ACTION_ROTATE)
 		{
-
+			double angle = dx / m_sensitivity[1];
 			if (m_isAxis_X)
 			{
+				rotationOffset[0] += (m_nCoordSpace == ID_BUTTON_OBJECT) ? angle : -angle;
 				if (m_nCoordSpace == ID_BUTTON_OBJECT)
-					model->Rotate(Mat4::RotateX(dx / m_sensitivity[1]));
+					model->Rotate(Mat4::RotateX(angle));
 				else
-					camera->Rotate(Mat4::RotateX(-dx / m_sensitivity[1]), aroundEye);
+					camera->Rotate(Mat4::RotateX(-angle), aroundEye);
 			}
 			if (m_isAxis_Y)
 			{
+				rotationOffset[1] += angle;
 				if (m_nCoordSpace == ID_BUTTON_OBJECT)
-					model->Rotate(Mat4::RotateY(dx / m_sensitivity[1]));
+					model->Rotate(Mat4::RotateY(angle));
 				else
-					camera->Rotate(Mat4::RotateY(dx / m_sensitivity[1]), aroundEye);
+					camera->Rotate(Mat4::RotateY(angle), aroundEye);
 			}
 			if (m_isAxis_Z)
 			{
+				rotationOffset[2] += (m_nCoordSpace == ID_BUTTON_OBJECT) ? -angle : angle;
 				if (m_nCoordSpace == ID_BUTTON_OBJECT)
-					model->Rotate(Mat4::RotateZ(-dx / m_sensitivity[1]));
+					model->Rotate(Mat4::RotateZ(-angle));
 				else
-					camera->Rotate(Mat4::RotateZ(dx / m_sensitivity[1]), aroundEye);
+					camera->Rotate(Mat4::RotateZ(angle), aroundEye);
 			}
 		}
 		else if (m_nAction == ID_ACTION_SCALE)
 		{
-			double x_trans = 1.0 + (m_isAxis_X ? (dx / m_sensitivity[2]) : 0.0);
-			double y_trans = 1.0 + (m_isAxis_Y ? (dx / m_sensitivity[2]) : 0.0);
-			double z_trans = 1.0 + (m_isAxis_Z ? (dx / m_sensitivity[2]) : 0.0);
+			double scale = -dx / m_sensitivity[2];
+			double x_trans = 1.0 + (m_isAxis_X ? scale : 0.0);
+			double y_trans = 1.0 + (m_isAxis_Y ? scale : 0.0);
+			double z_trans = 1.0 + (m_isAxis_Z ? scale : 0.0);
 
 			x_trans = (x_trans < 0.01) ? 0.01 : x_trans;
 			y_trans = (y_trans < 0.01) ? 0.01 : y_trans;
 			z_trans = (z_trans < 0.01) ? 0.01 : z_trans;
 
-			scaleFactor *= x_trans;
+			scaleOffset *= Vec4(x_trans, y_trans, z_trans);
 			
 			if (m_nCoordSpace == ID_BUTTON_OBJECT)
 				model->Scale(Mat4::Scale(x_trans, y_trans, z_trans));
@@ -1930,7 +1946,6 @@ void CCGWorkView::OnLButtonUp(UINT nFlags, CPoint point)
 {
 	if (isRecording)
 	{
-		double dx = point.x - m_MouseClickPos.x;
 		clock_t ticksDiff = clock() - m_MouseDownTicks;
 		double timeDiff = (double)ticksDiff / CLOCKS_PER_SEC;
 
@@ -1946,26 +1961,15 @@ void CCGWorkView::OnLButtonUp(UINT nFlags, CPoint point)
 
 		if (m_nAction == ID_ACTION_TRANSLATE)
 		{
-			double offset = dx / m_sensitivity[0];
-			keyFrame->Translation[0] = m_isAxis_X ? offset : 0.0;
-			keyFrame->Translation[1] = m_isAxis_Y ? offset : 0.0;
-			keyFrame->Translation[2] = m_isAxis_Z ? offset : 0.0;
+			keyFrame->Translation = translationOffset;
 		}
 		else if (m_nAction == ID_ACTION_ROTATE)
 		{
-			double angle = dx / m_sensitivity[1];
-			keyFrame->Rotation[0] = m_isAxis_X ? angle : 0.0;
-			keyFrame->Rotation[0] = (m_nCoordSpace == ID_BUTTON_OBJECT) ? keyFrame->Rotation[0] : -keyFrame->Rotation[0];
-			keyFrame->Rotation[1] = m_isAxis_Y ? angle : 0.0;
-			keyFrame->Rotation[2] = m_isAxis_Z ? angle : 0.0;
-			keyFrame->Rotation[2] = (m_nCoordSpace == ID_BUTTON_OBJECT) ? -keyFrame->Rotation[2] : keyFrame->Rotation[2];
+			keyFrame->Rotation = rotationOffset;
 		}
 		else
 		{
-			scaleFactor = (scaleFactor < 0.01) ? 0.01 : scaleFactor;
-			keyFrame->Scale[0] = m_isAxis_X ? scaleFactor : 1.0;
-			keyFrame->Scale[1] = m_isAxis_Y ? scaleFactor : 1.0;
-			keyFrame->Scale[2] = m_isAxis_Z ? scaleFactor : 1.0;
+			keyFrame->Scale = scaleOffset;
 		}
 		keyFrame->OriginalFrame = keyFrame->FrameNumber;
 

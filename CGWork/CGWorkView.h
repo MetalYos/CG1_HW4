@@ -142,8 +142,9 @@ private:
 	bool isLinearInterpolation;
 	int framesPerSeconds;
 	clock_t m_MouseDownTicks;
-	CPoint m_MouseClickPos;
-	double scaleFactor; // Keeps track of the scale when recording
+	Vec4 translationOffset;
+	Vec4 rotationOffset;
+	Vec4 scaleOffset;
 	std::string animFileName;
 
 	//AntiAliasing 
