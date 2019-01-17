@@ -77,6 +77,9 @@ bool Animation::StepToNextFrame(bool linearInterpolation)
 	int currentFrameNum = currentFrame->FrameNumber;
 	delete currentFrame;
 	currentFrame = GetFrame(++currentFrameNum, linearInterpolation);
+	
+	if (currentFrame == NULL)
+		return false;
 
 	return true;
 }
@@ -230,8 +233,21 @@ Frame* Animation::GetFrameBezierInterpolation(int frameNum) const
 	sumCam[3][3] = 1.0;
 
 	Frame* frame = new Frame();
-	frame->ModelTransform = sumModel;
-	frame->CamTransform = sumCam;
+
+	if (isOnlyTranslation)
+	{
+		frame->ModelTransform = keyFrames[0]->ModelTransform;
+		frame->CamTransform = keyFrames[0]->CamTransform;
+		// extract out the translation part of the interpolated matriceis
+		// and implent it in the original model and cam matricies
+		frame->ModelTransform[3] = sumModel[3];
+		frame->CamTransform[3] = sumCam[3];
+	}
+	else
+	{
+		frame->ModelTransform = sumModel;
+		frame->CamTransform = sumCam;
+	}
 	frame->FrameNumber = frameNum;
 
 	return frame;

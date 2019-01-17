@@ -28,7 +28,7 @@ class Animation
 {
 public:
 	Animation()
-		: maxFrame(-1), currentFrame(NULL), speedFactor(1.0) {}
+		: maxFrame(-1), currentFrame(NULL), speedFactor(1.0), isOnlyTranslation(false) {}
 	~Animation() { ClearAnimation(); }
 
 	void AddKeyFrame(Frame* keyFrame);
@@ -55,5 +55,6 @@ private:
 	int maxFrame;
 	Frame* currentFrame;
 	double speedFactor;
+	bool isOnlyTranslation;
 };
 
