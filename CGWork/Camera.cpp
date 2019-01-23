@@ -41,6 +41,11 @@ Mat4 Camera::GetTranform() const
 	return cTransform;
 }
 
+Mat4 Camera::GetLookAtTransform() const
+{
+	return lookAt;
+}
+
 void Camera::SetOrthographic(double left, double right, double top, double bottom, double z_near, double z_far)
 {
 	Mat4 result;
@@ -182,6 +187,8 @@ void Camera::LookAt(const Vec4 & eye, const Vec4 & at, const Vec4 & up)
 	c.Transpose();
 	cTransform = Mat4::Translate(-eye) * c;
 	cTransform[3][3] = 1.0;
+
+	lookAt = cTransform;
 
 	camParams.Eye = eye;
 	camParams.EyeCam = eye * cTransform;

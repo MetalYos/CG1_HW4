@@ -946,7 +946,7 @@ Vec4 CCGWorkView::CalculateShading(LightParams* lights, Material* material, Vec4
 			Vec4 direction(lights[i].DirX, lights[i].DirY, lights[i].DirZ);
 			if (lights[i].Space == LIGHT_SPACE_LOCAL)
 			{
-				Mat4 camTransform = Scene::GetInstance().GetCamera()->GetTranform();
+				Mat4 camTransform = Scene::GetInstance().GetCamera()->GetLookAtTransform();
 
 				lightPos = lightPos * camTransform;
 
@@ -1171,7 +1171,6 @@ void CCGWorkView::AddFirstFrame()
 			Frame* keyFrame = new Frame();
 			keyFrame->ModelTransform = Scene::GetInstance().GetModels().back()->GetTransform();
 			keyFrame->CamTransform = Scene::GetInstance().GetCamera()->GetTranform();
-			keyFrame->FrameNumber = 0;
 			keyFrame->FrameNumber = 0;
 
 			anim.AddKeyFrame(keyFrame);
@@ -1600,6 +1599,7 @@ void CCGWorkView::OnFileLoad()
 		// Clear Animation
 		anim.ClearAnimation();
 		isRecording = false;
+		isPlaying = false;
 
 		isModelLoaded = true;
 		Invalidate();	// force a WM_PAINT for drawing.
@@ -1960,17 +1960,11 @@ void CCGWorkView::OnLButtonUp(UINT nFlags, CPoint point)
 		keyFrame->AroundEye = aroundEye;
 
 		if (m_nAction == ID_ACTION_TRANSLATE)
-		{
 			keyFrame->Translation = translationOffset;
-		}
 		else if (m_nAction == ID_ACTION_ROTATE)
-		{
 			keyFrame->Rotation = rotationOffset;
-		}
 		else
-		{
 			keyFrame->Scale = scaleOffset;
-		}
 		keyFrame->OriginalFrame = keyFrame->FrameNumber;
 
 		anim.AddKeyFrame(keyFrame);
@@ -2472,6 +2466,9 @@ void CCGWorkView::OnAnimationPlay()
 	if (anim.GetFrame(0) != NULL)
 	{
 		isPlaying = !isPlaying;
+		if (isPlaying)
+			anim.ResetAnimation();
+
 		Invalidate();
 	}
 }

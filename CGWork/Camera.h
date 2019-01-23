@@ -38,6 +38,7 @@ class Camera
 private:
 	Mat4 cTransform;
 	Mat4 projection;
+	Mat4 lookAt;
 
 	Mat4 perspective;
 	Mat4 orthographic;
@@ -55,6 +56,7 @@ public:
 	void Scale(Mat4& S, bool aroundEye = true);
 	void Rotate(Mat4& R, bool aroundEye = true);
 	Mat4 GetTranform() const;
+	Mat4 GetLookAtTransform() const;
 
 	void SetOrthographic(double left, double right, double top, double bottom, double z_near, double z_far);
 	void SetOrthographic(double height, double aspectR, double z_near, double z_far);
