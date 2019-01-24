@@ -1860,6 +1860,7 @@ void CCGWorkView::OnLButtonDown(UINT nFlags, CPoint point)
 void CCGWorkView::OnMouseMove(UINT nFlags, CPoint point)
 {
 	double dx = point.x - prevMousePos.x;
+	double dy = point.y - prevMousePos.y;
 
 	if ((nFlags & MK_LBUTTON) == MK_LBUTTON)
 	{
@@ -1875,6 +1876,13 @@ void CCGWorkView::OnMouseMove(UINT nFlags, CPoint point)
 			trans[0] = m_isAxis_X ? dx / m_sensitivity[0] : 0.0;
 			trans[1] = m_isAxis_Y ? -dx / m_sensitivity[0] : 0.0;
 			trans[2] = m_isAxis_Z ? dx / m_sensitivity[0] : 0.0;
+
+			if (m_isAxis_X && m_isAxis_Y)
+				trans[1] = -dy / m_sensitivity[0];
+			if (m_isAxis_X && m_isAxis_Z)
+				trans[2] = dy / m_sensitivity[0];
+			if (m_isAxis_Y && m_isAxis_Z)
+				trans[2] = dy / m_sensitivity[0];
 
 			if (m_nCoordSpace == ID_BUTTON_OBJECT)
 			{
@@ -2218,13 +2226,11 @@ void CCGWorkView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		fog.IsEnabled = !fog.IsEnabled;
 	if (nChar == VK_OEM_PLUS) // + key  
 	{
-		anim.ResetAnimation();
-		anim.IncreasePlaybackSpeed(25.0);
+		OnPlaybackspeedIncrease();
 	}
 	if (nChar == VK_OEM_MINUS) // - Key 
 	{
-		anim.ResetAnimation();
-		anim.DecreasePlaybackSpeed(25.0);
+		OnPlaybackspeedDecrease();
 	}
 
 	if (nChar == 0x50) // P key
@@ -2235,6 +2241,11 @@ void CCGWorkView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 			if (!isPlaying)
 				anim.ResetAnimation();
 		}
+	}
+	if (nChar == 0x4F) // O key
+	{
+		isPlaying = false;
+		anim.ResetAnimation();
 	}
 	if (nChar == 0x52) // R key
 	{
@@ -2528,18 +2539,21 @@ void CCGWorkView::OnUpdateInterpolationBezier(CCmdUI *pCmdUI)
 
 void CCGWorkView::OnPlaybackspeedNormal()
 {
+	anim.ResetAnimation();
 	anim.NormalPlaybackSpeed();
 }
 
 
 void CCGWorkView::OnPlaybackspeedIncrease()
 {
+	anim.ResetAnimation();
 	anim.IncreasePlaybackSpeed(25.0);
 }
 
 
 void CCGWorkView::OnPlaybackspeedDecrease()
 {
+	anim.ResetAnimation();
 	anim.DecreasePlaybackSpeed(25.0);
 }
 
